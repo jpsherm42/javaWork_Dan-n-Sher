@@ -35,9 +35,8 @@ public abstract class Ship {
 	 */
 	public Ship(int length) {
 		this.length = length;
-		//initialize hit array with slots equal to the ship's length
-		this.hit = new boolean[length];
-		
+		//initialize hit array with 4 slots (Piazza @ 556)
+		this.hit = new boolean[4];		// ********** Changed by justin ***********************************
 	}
 	
 	//getters
@@ -101,7 +100,7 @@ public abstract class Ship {
 	}
 	
 	/**
-	 * Sets the value of the instancevariable horizontal 
+	 * Sets the value of the instance variable horizontal 
 	 * @param horizontal
 	 */
 	public void setHorizontal(boolean horizontal) {
@@ -276,8 +275,25 @@ public abstract class Ship {
 		//get array of Ship's coordinates
 		int[][] shipCoordinates = this.allShipCoordinates(this.bowRow, this.bowColumn, this.horizontal);
 		
-		for(i=0; i<shipCoordinates.length; i++) {
+		for(int i=0; i<shipCoordinates.length; i++) {
 			if((shipCoordinates[i][0] == row) && (shipCoordinates[i][1] == column)) {
+				
+				// update hit array
+				if (this.isHorizontal()) {
+					for (int k = 0; k < this.getLength(); k++) {
+						if (column == this.getBowColumn() - k) {
+							this.getHit()[k] = true;
+						}
+					}
+					
+				} else {		// vertical
+					for (int n = 0; n < this.getLength(); n++) {
+						if (row == this.getBowRow() - n) {
+							this.getHit()[n] = true;
+						}
+					}
+				}
+				// return "outcome" of shoot
 				return true;
 			}
 		}
@@ -292,15 +308,32 @@ public abstract class Ship {
 	 */
 	boolean isSunk() {
 		
-		//loops through hit array. If one of its slots has not been hit, return false, as the ship is not sunk
-		for (boolean part: this.hit) {
-			if (part == false) {
-				return false;
+		int truesCounter = 0;
+		// iterate through the hit array but only to the index corresponding to the length of the specific ship subclass
+		for(int i = 0; i < this.getLength(); i++) {
+			if (this.getHit()[i] == true) {
+				truesCounter++;
 			}
 		}
 		
+		// same number of hits (trues) as the length, then the ship is sunk
+		if (truesCounter == this.getLength()) {
+			return true;
+		} else {
+			return false;
+		}
+		
+		// DAN'S ORIG CODE ***********************************************************************
+		//loops through hit array. If one of its slots has not been hit, return false, as the ship is not sunk
+		//for (boolean part: this.hit) {
+			//if (part == false) {
+				//return false;
+			//}
+		//}
+		
 		//otherwise, return true
-		return true;
+		//return true;
+		// *****************************************************************************************
 	}
 	
 	/**
