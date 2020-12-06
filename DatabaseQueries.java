@@ -15,17 +15,19 @@ public class DatabaseQueries {
 	 * Query database
 	 * @param connection - Connection (Object) to use
 	 */
-	public static void readFromDatabase(Connection connection) {
+	public static void readFromDatabase(Connection connection, String query) {
 		
 		try {
 			
-			String bookSelectQuery = "SELECT * FROM books";
-			PreparedStatement preparedStatement = connection.prepareStatement(bookSelectQuery);
+			String selectQuery = query;
+			PreparedStatement preparedStatement = connection.prepareStatement(selectQuery);
 			
 			//execute query and get result set
 			ResultSet resultSet = preparedStatement.executeQuery();
 			
+			// this will eventually print to a WINDOW
 			DatabaseQueries.printResultSet(resultSet);
+			
 			
 			resultSet.close();
 			preparedStatement.close();
@@ -38,7 +40,9 @@ public class DatabaseQueries {
 	 * Prints given ResultSet
 	 * @param resultSet - ResultSet (Object) to print
 	 */
+	// JUSTIN
 	private static void printResultSet(ResultSet resultSet) {
+		
 		//SPECIFIC TO BOOKS TABLE ******************************************************************************************************************
 		System.out.println("book_ID\t| title\t| author\t| genre\t| Checked Out?\t| On Hold?\t| Loan Length (days)\t| Daily Fine Amount ($)");
 		try {
