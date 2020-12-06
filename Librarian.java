@@ -27,26 +27,48 @@ public class Librarian {
 		//remove patronID
 	}
 	
-	public static void getList(Connection connection, String table, String keyword, String criterion) {	// set default values for keyword and criterion
+	public static void getHoldsList(Connection connection, String bookTable, String patronTable, String checkOutTable, String holdsView, String criterion) {	// set default value and criterion
+		//SELECT (Whateverwesaid) where keyword.criterion
 		// default values are for getting all holds or checkouts (not based on a search criterion)
 		// if keyword is default, then use a Select * 
 		// otherwise
 		
-		//SELECT (Whateverwesaid) where keyword.criterion
+		// ************ we'll need views for the join between the 3 tables
+		// SO, this method may actually end up being the same as the getOverdue where we end up passing the keyword and criterion
+		// and for overdues, the keyword is overdues or whwatever the name of the view is; and the criterion is ""/null
+		
+		/*
+		 
+		 LIST HOLDS view: (we want all columns)
+		 Title | Book ID | Patron | Patron ID | Request Date
+		 
+		 */
+		
+		
 	}
 	
-	// DAN
-	public static void getOverdue(Connection connection, String bookTable, String patronTable, String checkOutTable) {
-			
-		// SELECT
-		
-		// goal: list of over due books (with patron name, if possible)
-		
-		// *** view--> built in database? by double join
-		// booksID, title, author, check-out date, patron_ID, patron name, book.loanLength, calculated_column: due date (check-out + loanLength), daily fine
-		
-		// from the above view, select (title, atuhor, patron name (id's for both?), due date, calcedCol: daysLate = today-due date, calc_Col2: fineamt = dailyfine*daysLate
-		// where daysLate > 0
+	public static void getCheckOutsList(Connection connection, String bookTable, String patronTable, String checkOutTable, String checkOutsView, String keyword, String criterion) {
+		// keyword and criterion allow for filtering by title, author, patron
+	
+		/* *** view--> built in database by double join; select query of view
+		 LIST CHECK-OUTS view:
+		 1 Title | 2 Book ID | 3 Patron | 4 Patron ID | 5 Check-out Date (*this one may not be necessary) | 6 Due Date = Check-out Date + books.loanLength | 7 daysLate = today-due date | 8 fineAmt = books.dailyfine * daysLate | 9 On Hold?
+		 
+		 
+		 ^^ when we ask for check outs or overdue, we'll just pass the column numbers we want [hard coded] (see below)
+		 
+		 
+		 
+		 */
+	}
+	
+	public static void getOverdueList(Connection connection, String checkOutsView) {	// special case filtering of above based on date
+		// SELECT from VIEW
+		// goal: list of over due books
+		/* display the following columns from the CheckOutsList view
+		 * where daysLate > 0
+		 * desiredColums = all but 9
+		*/
 	}
 	
 }
