@@ -3,6 +3,10 @@ package lms;
 import java.sql.Connection;
 
 public class Librarian {
+	/*ADDITIONAL FUNCTION
+	 * UPDATE PATRON FINE (Manual input value)
+	 */
+	
 
 	// just a place to organize/store our functions
 	
@@ -52,8 +56,9 @@ public class Librarian {
 	
 		/* *** view--> built in database by double join; select query of view
 		 LIST CHECK-OUTS view:
-		 1 Title | 2 Book ID | 3 Patron | 4 Patron ID | 5 Check-out Date (*this one may not be necessary) | 6 Due Date = Check-out Date + books.loanLength | 7 daysLate = today-due date | 8 fineAmt = books.dailyfine * daysLate | 9 On Hold?
+		 1 patron_ID, 2firstName, 3lastName, 4book_ID, 5title, 6onHold, 7checkOutDate, 8dailyFineAmount, 9dueDate, 10daysLate, 11fineAmount
 		 
+		 desiredColumns = {1,2,3,4,5,6,7,9,10,11}
 		 
 		 ^^ when we ask for check outs or overdue, we'll just pass the column numbers we want [hard coded] (see below)
 		 
@@ -62,12 +67,13 @@ public class Librarian {
 		 */
 	}
 	
-	public static void getOverdueList(Connection connection, String checkOutsView) {	// special case filtering of above based on date
+	public static void getOverdueList(Connection connection, String checkOutsView) {	// special case filtering of above based on date???
 		// SELECT from VIEW
 		// goal: list of over due books
 		/* display the following columns from the CheckOutsList view
 		 * where daysLate > 0
-		 * desiredColums = all but 9
+		 * desiredColums = all but 6 desiredColumns = {1,2,3,4,5,7,9,10,11}
+		 * *** unless we group by patron_ID and just get the total that each patron owes?
 		*/
 	}
 	
