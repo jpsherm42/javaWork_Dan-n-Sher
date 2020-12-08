@@ -9,8 +9,7 @@ CREATE TABLE books (
   onHold boolean DEFAULT False,
   loanLength int DEFAULT 14,
   dailyFineAmount float DEFAULT 0.25,
-  PRIMARY KEY (book_ID),
-  UNIQUE KEY (title)
+  PRIMARY KEY (book_ID)
 );
 
 ALTER TABLE books AUTO_INCREMENT=10;		# so that all id's have the same number of digits [2] (I don't think we'll have more than 90)
