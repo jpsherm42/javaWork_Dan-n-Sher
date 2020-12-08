@@ -6,6 +6,7 @@ VIEW `holdsview` AS
     SELECT 
         `books`.`book_ID` AS `book_ID`,
         `books`.`title` AS `title`,
+        `books`.`checkedOut` AS `checkedOut`,
         `holds`.`requestDate` AS `requestDate`,
         `patrons`.`patron_ID` AS `patron_ID`,
         `patrons`.`firstName` AS `firstName`,
