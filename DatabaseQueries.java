@@ -141,108 +141,65 @@ public class DatabaseQueries {
 	
 	/**
 	 * Adds a row of values to the given table.
-	 * We assume that the column values will always be in the correct/same order every time that this method is called. The values array will always have more than 1 value; in fact it will always have at least 4 (lowest number of columns in db).
-	 * All column names are used/considered, so default values will have to be passed in values array as appropriate/applicable.
-	 * Creates a general/generic "INSERT INTO" query String with "?"'s equal to the number of columns (values.length). Each table has it's own case for creating the PreparedStatement with actual values/information/data.
+	 * We assume that the column values will always be in the correct/same order every time that this method is called.
+	 * Each table has it's own case for creating the query (String) with actual values/information/data or default, as necessary/appropriate/applicable.
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: Name of table to add to
 	 * @param values: Values for each column of table
 	 */
-	// 
-	// 
-	// 
 	public static void addToTable(Connection connection, String table, String[] values) {		
 		
-		String insertQuery = "INSERT INTO " + table + " VALUES (?";
+		String insertQuery = "INSERT INTO " + table + " VALUES (";
 		
-		// add appropriate number of ?'s
-		// the ? above represents the 0th term, so we only need terms 1, ..., length-1
-		for (int i = 1; i < values.length; i++) {
-			insertQuery += ",?";
+		// because all the tables are different and not all Strings, each one needs a separate add section and we can't use easy for-loops :(
+		// yay for hard-coding! It also makes more sense to just construct a robust string vs. making a string with "?"'s and then updating the PreparedStatement
+		// If the array values does not have the proper length for a given table; prints a message and exits the method
+		
+		if (table.equals("books")) {
+			
+			// we assume that for the purposes of this program, all books will get the default loan length and daily fine amount
+			if (values.length != 3) {	// values array should have length 3 for title [0], author [1], and genre [2]
+				JOptionPane.showMessageDialog(null, "Could not add row to table " + table + " due to improper number of entry values.", "Improper Entry", JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+			
+			insertQuery += "default,\"" + values[0] 	// title 
+					+ "\",\"" + values [1] 				// author
+							+ "\",\"" + values[2] 		// genre
+									+ "\",default,default,default,default);";
+			  
+		} else if (table.equals("patrons")) {
+			
+			// we assume that for the purposes of this program, all patrons will get the default maxBooksOut and maxHolds values
+			if (values.length != 2 ){ // values array should have length 2 for first name [0] and last name [1]
+				JOptionPane.showMessageDialog(null, "Could not add row to table " + table + " due to improper number of entry values.", "Improper Entry", JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+			
+			insertQuery += "default,\"" + values[0] 	// first name
+					+ "\",\"" + values[1]				// last name 
+							+ "\",default,default,default,default,default);";
+			  
+		} else {	// table = "holds" or table = "checkouts"
+			
+			if (values.length != 3) {// values array should have length 3 for book_ID [0], patron_ID [1], date [2]
+				JOptionPane.showMessageDialog(null, "Could not add row to table " + table + " due to improper number of entry values.", "Improper Entry", JOptionPane.INFORMATION_MESSAGE);
+				return;
+			}
+			
+			// This method is called for adding holds or checkouts from a patron, so we know the foreign key patron_ID will exist in the patrons table;
+			// the code to ensure that the book_ID exists in the books table will occur prior to calling this method.
+			// Therefore, we will assume that by this point/for this method, addition to the table will be possible.
+			
+			insertQuery += "default," + values[0]	// book_ID (in the table it's a number, so it is not necessary to pass quotations for it 
+					+ "," + values[1]				// patron_ID
+							+ ",\"" + values[2]		// date (as a string)
+									+ "\");";
 		}
 		
-		insertQuery += ")";
-		
 		//System.out.println(insertQuery);
-		
 		try {
 			PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
-			
-			// because all the tables are different and not all Strings, each one needs a separate add section and we can't use easy for-loops :(
-			// yay for hard-coding!
-			// INSERT VALUES INTO PreparedStatement
-			
-			if (table.equals("books")) {	// values will have length 8
-				  /* first 6 columns (all passed as Strings)
-				   * 1/0 book_ID int auto-increment -> pass the word **default**
-				   * 2/1 title varchar(225)
-				   * 3/2 author varchar(225)
-				   * 4/3 genre varchar(225)
-				   * 5/4 checkedOut tinyint(1) [BOOLEAN] -> pass the word **default**
-				   * 6/5 onHold tinyint(1) [BOOLEAN] -> pass the word **default**
-				   */
-				  for (int i = 0; i <= 5; i++) {
-					  preparedStatement.setString(i+1, values[i]);
-				  }
-				  
-				  // 7th column (6th index): loanLength int
-				  preparedStatement.setInt(7, Integer.parseInt(values[6]));
-				  
-				  // 8th column (7th index): dailyFineAmount float
-				  preparedStatement.setFloat(8, Float.parseFloat(values[7]));
-				  
-			} else if (table.equals("patrons")) { // values will have length 8
-				  /*
-				  1/0 patron_ID int AI PK -> pass **default**
-				  2/1 firstName varchar(225) 
-				  3/2 lastName varchar(225) 
-				  4/3 numBooksOut int  -> pass **default**
-				  * 5/4 maxBooks int ==> pass as int
-				  6/5 numHolds int  -> pass **default**
-				  * 7/6 maxHolds int  ==> pass as int
-				  8/7 totalFineAmount float -> pass **default**
-				  */
-
-				  // quickly fill values for Strings
-				  int[] stringIndeces = {0,1,2,3,5,7};
-				  
-				  for (int index : stringIndeces) {
-					  preparedStatement.setString(index + 1, values[index]);
-				  }
-				  
-				  // 5/4 maxBooks int ==> pass as int
-				  preparedStatement.setInt(5, Integer.parseInt(values[4]));
-				  
-				  // 7/6 maxHolds int  ==> pass as int
-				  preparedStatement.setInt(7, Integer.parseInt(values[6]));
-				  
-			} else {	// table = "holds" or table = "checkouts"
-				/*
-			  	1/0 chkO_ID int AI PK -or- hold_ID int AI PK -> pass **default**
-				2/1 book_ID int 
-				3/2 patron_ID int 
-				4/3 checkOutDate date	==> ** in the method that creates values, take current date/time and convert to string
-			   */
-			  
-			  preparedStatement.setString(1, values[0]);
-			  preparedStatement.setInt(2, Integer.parseInt(values[1]));
-			  preparedStatement.setInt(3, Integer.parseInt(values[2]));
-
-			  /*
-			   * Got the below code from:
-			   * https://stackoverflow.com/questions/23047200/convert-string-to-java-sql-date
-			   * (not documentation)
-			   */
-			  SimpleDateFormat format = new SimpleDateFormat("YYYY-MM-DD");
-			  java.sql.Date sqlDate = null;
-			  try {
-				  java.util.Date utilDate = format.parse(values[3]);
-			      sqlDate = new java.sql.Date(utilDate.getTime());
-			    } catch (ParseException e) {
-			        e.printStackTrace();
-			    } 
-			  preparedStatement.setDate(4, sqlDate);
-			}
 			
 			int rowsAffected = writeToDatabase(preparedStatement);
 			JOptionPane.showMessageDialog(null, rowsAffected + " entry added to " + table, "Insert Results", JOptionPane.INFORMATION_MESSAGE);
@@ -257,8 +214,8 @@ public class DatabaseQueries {
 	 * Remove a row/entry from the given table using the condition passed by `keyword` = criterion
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: Name of table to remove from
-	 * @param keyword: Name column to apply criterion to / use for condition (almost always will be `book_ID` or `patron_ID`)
-	 * @param criterion: Column value for desired row (input from user)
+	 * @param keyword: Name column to apply criterion to / use for condition (will always be `book_ID` or `patron_ID`)
+	 * @param criterion: ID number of desired row (input from user) [***If for some reason the criterion is for a varchar column, the \" 's will have to be passed, too as the query constructor does NOT include those.]
 	 */
 	public static void removeFromTable(Connection connection, String table, String keyword, String criterion) {
 		
@@ -282,8 +239,8 @@ public class DatabaseQueries {
 	 * @param table: Name of table to update
 	 * @param column: Name column to update value for
 	 * @param value: Value to change above column to
-	 * @param keyword: Name of column to apply criterion to / use for condition (almost always will be `book_ID` or `patron_ID`)
-	 * @param criterion: Column value for desired row (input from user)
+	 * @param keyword: Name of column to apply criterion to / use for condition (will always be `book_ID` or `patron_ID`)
+	 * @param criterion: ID number of desired row (input from user) [***If for some reason the criterion is for a varchar column, the \" 's will have to be passed, too as the query constructor does NOT include those.]
 	 */
 	public static void updateColumn(Connection connection, String table, String column, String value, String keyword, String criterion) {
 		String changeValQuery = "UPDATE " + table + " SET " + column + " = " + value + " WHERE " + keyword + " = " + criterion + ";";
@@ -291,7 +248,7 @@ public class DatabaseQueries {
 		
 		try {
 			PreparedStatement preparedStatement = connection.prepareStatement(changeValQuery);
-			int rowsAffected = writeToDatabase(preparedStatement);
+			int rowsAffected = writeToDatabase(preparedStatement);	// will return 0 if no change made; no harm, no foul
 			JOptionPane.showMessageDialog(null, rowsAffected + " entry updated in " + table, "Update Results", JOptionPane.INFORMATION_MESSAGE);
 		} catch (SQLException SQLe) {
 			SQLe.printStackTrace();
@@ -322,14 +279,21 @@ public class DatabaseQueries {
 	 * for testing purposes
 	 */
 	public static void main(String[] args) {
-		Connection conn = DatabaseConnection.openDatabase();
-		//Patron danTheMan = new Patron(conn, "patrons", "Dan", "Gallagher");
-		String table = "books";
-		String[] values = {"firstName", "LastName", "etc"};
-		String column = "onHold";
-		String value = "true";
-		String keyword = "book_ID";
-		String criterion = "10";
-		//updateColumn(conn, table, column, value, keyword, criterion);
-	}	
+		Connection connection = DatabaseConnection.openDatabase();
+		
+		String table = "patrons";
+		String[] bookValues = {"fake title", "fake author", "fake genre"};
+		String[] patronValues = {"fake first", "fake last"};
+		String column = "checkedOut";
+		String value = "false";
+		String keyword = "patron_ID";
+		String criterion = "11";
+		
+		// ***** SAVE - CONVERT DATE TO STRING IN GIVEN FORMAT
+		// FROM :  https://www.javatpoint.com/java-date-to-string
+		java.util.Date date = java.util.Calendar.getInstance().getTime();  
+		java.text.DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd");  
+		String strDate = dateFormat.format(date);
+	}
+	
 }
