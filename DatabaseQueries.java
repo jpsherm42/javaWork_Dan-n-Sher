@@ -2,9 +2,13 @@ package lms;
 
 // imports
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+
+import javax.swing.JOptionPane;
 
 /**
  * Manages database queries.
@@ -14,10 +18,12 @@ import java.sql.SQLException;
 public class DatabaseQueries {
 	
 	/**
-	 * Query database
-	 * @param connection - Connection (Object) to use
+	 * Perform SELECT query with connection to database
+	 * @param connection: Connection (Object) to use for database
+	 * @param selectQuery: String of SELECT query language
+	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed 
 	 */
-	public static void readFromDatabase(Connection connection, String selectQuery, int[] desiredColumns) {
+	public static void readFromDatabase(Connection connection, String selectQuery, String[] columns) {
 		
 		try {
 
@@ -29,7 +35,7 @@ public class DatabaseQueries {
 			//execute query and get result set
 			ResultSet resultSet = preparedStatement.executeQuery();
 			
-			DatabaseQueries.printResultSet(resultSet, desiredColumns);
+			DatabaseQueries.printResultSet(resultSet, columns);
 			
 			resultSet.close();
 			preparedStatement.close();
@@ -39,62 +45,83 @@ public class DatabaseQueries {
 		}
 	}
 	
-	/**
-	 * Prints given ResultSet into window format
+	/*
+	 * Prints given ResultSet in window format
 	 * only given columns
 	 * @param resultSet - ResultSet (Object) to print
+	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
 	 */
-	private static void printResultSet(ResultSet resultSet, int[] desiredColumns) {
+	private static void printResultSet(ResultSet resultSet, String[] columns) {
 				
 		try {
+			//point at last entry/row
+			resultSet.last();
+			// row number (if there are none, this will be 0)
+			int numRows = resultSet.getRow();
 			
 			// when there are results returned
-			if(resultSet!=null) {
+			if(numRows != 0) {
 				
 				//point at last entry/rows
 				resultSet.last();
 				// get row value
-				int numRows = resultSet.getRow();
+				numRows = resultSet.getRow();
 				// point back to before the first entry/row
 			    resultSet.beforeFirst();
-			    
 				
-		        //Create the appropriately sized array for your results
-		    	String[][] results = new String[numRows][desiredColumns.length];
+		        // Create the appropriately sized array for your results
+			    // 1 extra row for column (field) headers
+		    	String[][] results = new String[numRows+1][columns.length];
 		    	
+		    	// add column headers to 0th row of results array
+		    	
+		    	for (int cl = 0; cl < columns.length; cl++) {
+		    		results[0][cl] = columns[cl];
+		    	}
 		    	
 		    	
 				//Put results in array
-		        for(int row = 0; row < numRows; row++){
+		        for(int row = 1; row <= numRows; row++){
 		        	
 		        	int col = 0;
 		        	
 		        	if(resultSet.next()){	// if there are results to read/point at
-		        		// Get the column values via columnNumber
-			        	// only use the specified columns
-		        		for(int column: desiredColumns){
+		        		// Get the column values via column headers (String value)
+			        	// only use the specified column headers
+		        		for(String column: columns){
 		        			
-		        			if (column == 5) {	// check-out column
+		        			// AVAILABLE COLUMN
+		        			if (column.equals("Available")) {
 		        				// availability is opposite of checkedOut
-		        				Boolean available = !resultSet.getBoolean(column);
-		        				
+		        				Boolean available = resultSet.getBoolean(column);
 		        				if (available) {
 		        					results[row][col] = "Available";
 		        				} else {
 		        					results[row][col] = "Not Available";
 		        				}
-		        				
+		        			// FINE COLUMN: format to display $ and 2 decimal places
+		        			} else if (column.equals("Fine")){
+		        				double fineAmount = resultSet.getDouble(column);
+		        				results[row][col] = "$" + String.format("%2.2f",fineAmount);		// ASSUMPTION: hopefully no one owes more than $ 99.75 in fines!
+		        			
+		        			// DUE (date) COLUMN:  format to display day of week and month (MMM) and day (DD)
+		        			} else if (column.equals("Due")){
+		        				Date dueDate = resultSet.getDate(column);
+		        				SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, MMM dd");
+		        				results[row][col] = dateFormat.format(dueDate);
+		        			
 		        			} else {
+		        			
 		        				results[row][col] = resultSet.getString(column);
 		        			}
 		        			
 			       			col++;
 			       		}
 		        	}
-		        	
 		        }
 							
-		     // ***************** CHANGE THIS TO A MESSAGE WINDOW *******
+		        // Class.displayInWindow(String[][] results)
+		        // ***************** CHANGE THIS TO A MESSAGE WINDOW *******
 		        for (int r = 0; r < results.length; r++) {
 					for (int c = 0; c < results[r].length; c++) {
 						System.out.print(results[r][c] + "__");
@@ -104,55 +131,31 @@ public class DatabaseQueries {
 		        
 				
 			} else {		// not results returned
-				// ***************** CHANGE THIS TO A MESSAGE WINDOW *******
-				System.out.println("There are no results to display");
+				JOptionPane.showMessageDialog(null, "There are no entries to display for the given search criteria.", "Query Results", JOptionPane.INFORMATION_MESSAGE);
 			}
 			
 		} catch (SQLException SQLe) {
 				SQLe.printStackTrace();
 		}
 		
-		
-		//SPECIFIC TO BOOKS TABLE ******************************************************************************************************************
-		//System.out.println("book_ID\t| title\t| author\t| genre\t| Checked Out?\t| On Hold?\t| Loan Length (days)\t| Daily Fine Amount ($)");
-		/*
-		
-		int book_ID = resultSet.getInt(1);
-		String title = resultSet.getString(2);
-		String author = resultSet.getString(3);
-		String genre = resultSet.getString(4);
-		boolean checkedOut = resultSet.getBoolean(5);
-		boolean onHold = resultSet.getBoolean(6);
-		int loanLength = resultSet.getInt(7);
-		int dailyFineAmount = resultSet.getInt(8);
-		
-		System.out.println(book_ID + "\t|\t" + title + "\t|\t" + author + "\t|\t" + genre + "\t|\t" + checkedOut + "\t|\t" + onHold + "\t|\t" + loanLength + "\t|\t" + dailyFineAmount);
-		*/
 	}
 	
-	public static void main(String[] args) {
+	/**
+	 * Writes to a database using the passed PreparedStatement--executes update and then closes.
+	 * Other methods construct the specific PreparedStatement necessary to perform the desired action.
+	 * @param preparedStatement: PreparedStatement to execute
+	 * @return rowsAffected:  The number of rows affected by the update.
+	 */
+	public static int writeToDatabase(PreparedStatement preparedStatement) {//Connection connection, String[] tables, String[] columns, String[] values) {
+		int rowsAffected = 0;
+		try {
+			rowsAffected = preparedStatement.executeUpdate();
+			preparedStatement.close();
+		} catch (SQLException SQLe) {
+			SQLe.printStackTrace();
+		}
 		
-		// open db connection
-		Connection connection = DatabaseConnection.openDatabase();
-		
-		//boolean usingDB = true;
-		
-		String table = "books";	//books2
-		String query = "SELECT * FROM " + table;
-		int[] desiredColumns = {2,3,5};	// title, author, checkedOut
-		
-		DatabaseQueries.readFromDatabase(connection, query, desiredColumns);		
-		
+		return rowsAffected;
 	}
 	
 }
-
-
-/*
-Statement s = connection.createStatement();
-//Determine table size (max number of results that can be generated)
-s.execute("SELECT COUNT(*) FROM " + table);
-ResultSet rows = s.getResultSet();
-rows.next(); //point at RS
-int numRows = Integer.parseInt(rows.getString(1));
-*/
