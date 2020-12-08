@@ -31,23 +31,20 @@ public class Librarian {
 		//remove patronID
 	}
 	
-	public static void getHoldsList(Connection connection, String bookTable, String patronTable, String checkOutTable, String holdsView, String criterion) {	// set default value and criterion
-		//SELECT (Whateverwesaid) where keyword.criterion
+	// *** 12/7 made a change here to the parameters
+	public static void getHoldsList(Connection connection, String holdsView, String keyword, String criterion) {
+		//SELECT (Whateverwesaid) where keyword = criterion
 		// default values are for getting all holds or checkouts (not based on a search criterion)
 		// if keyword is default, then use a Select * 
 		// otherwise
 		
-		// ************ we'll need views for the join between the 3 tables
-		// SO, this method may actually end up being the same as the getOverdue where we end up passing the keyword and criterion
-		// and for overdues, the keyword is overdues or whwatever the name of the view is; and the criterion is ""/null
-		
 		/*
-		 
 		 LIST HOLDS view: (we want all columns)
 		 Title | Book ID | Patron | Patron ID | Request Date
-		 
 		 */
 		
+		// 12/07 addition
+		// *** SORT by Patron then Author then Title ****
 		
 	}
 	
@@ -59,6 +56,10 @@ public class Librarian {
 		 1 patron_ID, 2firstName, 3lastName, 4book_ID, 5title, 6onHold, 7checkOutDate, 8dailyFineAmount, 9dueDate, 10daysLate, 11fineAmount
 		 
 		 desiredColumns = {1,2,3,4,5,6,7,9,10,11}
+		 
+		 
+		// SO, this method may actually end up being the same as the getOverdue where we end up passing the keyword and criterion
+		// and for overdues, the keyword is overdues or whwatever the name of the view is; and the criterion is ""/null
 		 
 		 ^^ when we ask for check outs or overdue, we'll just pass the column numbers we want [hard coded] (see below)
 		 
