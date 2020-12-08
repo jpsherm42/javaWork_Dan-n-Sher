@@ -1,18 +1,28 @@
 package lms;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
+/**
+ * Class for Patron objects; primarily for accessing the database and using the program as a Patron.
+ * This serves as a Class more than an object; organizes functions specific to patrons (vs. to librarians).
+ * Constructor adds new patrons to db.
+ * @author sherm
+ *
+ */
 public class Patron {
-	//  for accessing and using the program and making a new patron
-
-	//instance variables
-	int id;
-	String firstName;
-	String lastName;
 	
-	//static variables
-	static int MAX_BOOKS = 10;
-	static int MAX_HOLDS = 25;
+	//instance variables **** MAKE GETTER METHODS
+	private int id = 11; 		// ********************************************************
+	private String firstName;
+	private String lastName;
+	private int numHolds;
+	private int numBooksOut;
+	
+	//static variables **** MAKE GETTER METHODS
+	private static int MAX_BOOKS = 10;
+	private static int MAX_HOLDS = 25;
 	
 	//constructor (instantiates the instance variables by getting info from database)
 	public Patron(Connection connection, String table, String firstName, String lastName){
@@ -26,7 +36,7 @@ public class Patron {
 		
 	}
 	
-	// reconsider access modifier
+	// reconsider access modifier (for use as librarian)
 	// THIS ADDS IT TO THE DATABASE
 	private static void addPatron(Connection connection, String table, Patron patron) {
 		// update/write
@@ -34,41 +44,105 @@ public class Patron {
 		
 	}
 	
-	/* FUNCTION TO CIRCLE BACK TO:
+	/*
+	 * *************************************************************************
+	 * FUNCTION TO CIRCLE BACK TO:
 	 * Get a recommended book
 				*** select query
+	 *************************************************************************/
+	
+	/**
+	 * Constructs SELECT query for `books` table.
+	 * Calls functions to read from database based on query and display results.
+	 * If keyword and/or criterion is null or an empty string (""), calls getAllBooks method instead.
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: Name of table to be queried (in this case it should always be `books`)
+	 * @param keyword: Name of column (`title`, `author`, or `genre`) (based on user input) to apply criterion to
+	 * @param criterion: Search input from user
 	 */
-	
-	public static void bookSearch(Connection connection,  String table, String keyWord, String criterion) {
-		// SELECT/read query
+	public static void bookSearch(Connection connection, String table, String keyword, String criterion) {
 		
-		/* KEYWORD/CRITERION
-		 * title
-		 * author
-		 * genre
-		 */
+		String[] returnColumns = {"Title", "Author", "Available"};
 		
-		//pass connection and query string to readFromDatabase(connection, query)
-		// SELECT * from books WHERE books.keyWord = criterion
-		// we don't need all columns necessarily - loan length, daily fine amount; on hold
-		// show if it's available or not (!checked_out column)
+		// if no search criteria passed ==> patron wants to see all books
+		if (keyword == null || keyword == "" || criterion == null || criterion == "") {
+			getAllBooks(connection, table, returnColumns);
+			return;
+		}
+		
+		// construct query string
+		String searchQuery = "SELECT title AS Title, author AS Author, NOT checkedOut AS Available "
+				+ "FROM " + table + " "
+				+ "WHERE " + keyword + " = \"" + criterion + "\" "
+						+ "ORDER BY title, author;";
+		//System.out.println(searchQuery);			// in case you want to print it to see it
+		
+		// read from db; calls printResults method (results displayed in window)
+		DatabaseQueries.readFromDatabase(connection, searchQuery, returnColumns);
 		
 	}
 	
-	public void getPatronBooks(Connection connection, String table) {
-		// SELECT/read query
+	/**
+	 * Constructs SELECT query for `books` table to get all books in table.
+	 * Calls functions to read from database based on query and display results.
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: Name of table to be queried (in this case it should always be `books`)
+	 * @param returnColumns: Array of Strings (column headers) corresponding to the columns that will be printed
+	 */
+	private static void getAllBooks(Connection connection, String table, String[] returnColumns) {
+		// construct query string
+		String allBooksQuery = "SELECT title AS Title, author AS Author, NOT checkedOut AS Available "
+				+ "FROM " + table
+				+ " ORDER BY title, author;";
+		//System.out.println(allBooksQuery);			// in case you want to print it to see it
 		
-		// pass connx, query string to read method
-		// ***** title/author/avail   GOLD STANDARD
-		// maybe add loan length?
+		// read from db; calls printResults method (results displayed in window)
+		DatabaseQueries.readFromDatabase(connection, allBooksQuery, returnColumns);
+		
+	}
+
+	/**
+	 * Get a patron's holds or check-outs (determined by value of String `view`) by performing a SELECT query on the database (read, display results).
+	 * Must be called on a Patron object in order to access the patron's specific ID.
+	 * @param connection: Connection (Object) to use for database
+	 * @param view:  Name of view to be queried
+	 */
+	public void getPatronBooks(Connection connection, String view) {
+		
+		// declare/intialize variables with useless values for now
+		String selectQuery = "";
+		String[] returnColumns = null;
+		
+		// conditions for which view table since we want to display different columns
+		if (view.equals("holdsview")) {
+			selectQuery = "SELECT title AS Books "
+					+ "FROM " + view + " "
+					+ "WHERE patron_ID = " + this.id 
+					+ " SORT BY title;";
+			//System.out.println(selectQuery);			// in case you want to print it to see it
 			
-		// SELECT (^^^) FROM
-		// join of table and books ON Table.book_id = books.ID
-		//WHERE patron_id = this.id
+			// give value/meaning to array
+			returnColumns = new String[]{"Books"};
+		} else {		// checkoutsview
+			selectQuery = "SELECT title AS Books, dueDate AS Due, daysLate AS `Days Overdue`, fineAmount AS Fine "
+					+ "FROM " + view + " "
+					+ "WHERE patron_ID = " + this.id 
+					+ " SORT BY dueDate, title;";
+			//System.out.println(selectQuery);			// in case you want to print it to see it
+			
+			// give value/meaning to array
+			returnColumns = new String[]{"Books", "Due", "Days Overdue", "Fine"};
+		}
+		
+		// read from db; calls printResults method (results displayed in window)
+		DatabaseQueries.readFromDatabase(connection, selectQuery, returnColumns);
 		
 	}
+	
 	
 	public void changeBookStatusTrue(Connection connection, String table, int book_ID) {
+		// place a hold or check a book out -- > call addToTable on holds/checkouts; updateTable on books and on patrons
+		
 		// UPDATE/write query
 		
 		// pass connx, query to write method
@@ -78,9 +152,12 @@ public class Patron {
 		
 		//UPDATE TABLE -- check to make sure that book_ID, this.ID tuple doesnt already exist
 		// add to table: book_ID, this.ID, timedate.now()
+	
 	}
 	
 	public void changeBookStatusFalse(Connection connection, String table, int book_ID) {
+		// remove hold, return book --> call removeFromTable on Holds/checkouts; updateTable on books and on patrons
+		
 		// UPDATE/write query
 		
 		// pass connx, query to write method
@@ -90,6 +167,7 @@ public class Patron {
 		
 		//UPDATE TABLE
 		// REMOVE FROM table: book_ID, this.ID (there's only going to be one instance of this tuple)s
+		
 	}
 	
 }
