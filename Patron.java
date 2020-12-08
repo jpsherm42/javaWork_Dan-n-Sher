@@ -141,7 +141,8 @@ public class Patron {
 	
 	
 	public void changeBookStatusTrue(Connection connection, String table, int book_ID) {
-		// place a hold or check a book out -- > call addToTable on holds/checkouts; updateTable on books and on patrons
+		// used when placing a hold or check a book out
+		// this method will call call addToTable on holds/checkouts and then updateTable on books (status) and on patrons (numbers)
 		
 		// UPDATE/write query
 		
@@ -156,7 +157,8 @@ public class Patron {
 	}
 	
 	public void changeBookStatusFalse(Connection connection, String table, int book_ID) {
-		// remove hold, return book --> call removeFromTable on Holds/checkouts; updateTable on books and on patrons
+		// used when removing hold or returning book
+		// this method will call removeFromTable on Holds/checkouts and then updateTable on books (status) and on patrons (numbers)
 		
 		// UPDATE/write query
 		
@@ -169,5 +171,17 @@ public class Patron {
 		// REMOVE FROM table: book_ID, this.ID (there's only going to be one instance of this tuple)s
 		
 	}
+	
+	/**
+	 ************************** MORE METHODS! ******************************
+	 */
+	
+	// METHOD:  check out book (call changeTrue) -- see notes for place hold!
+	// METHOD:  return book (call changeFalse)
+	// METHOD:  place hold (call changeTrue) -- depending on how selection of book is made, may need to check that a book exists BEFORE passing to method
+	// since this will be called from a patron, we KNOW that the patron exists
+	// METHOD:  remove hold (call changeFalse) 
+	
+	// ** be mindful when passing date that it's passed as a string in the form : YYYY-MM-DD
 	
 }
