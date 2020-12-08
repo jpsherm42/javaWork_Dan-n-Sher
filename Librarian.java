@@ -16,19 +16,23 @@ public class Librarian {
 	
 	public static void addBook(Connection connection,  String table, String title, String author, String genre) {
 		// UPDATE/write
-		// add book
+		// add book info (matches the code in addToTable for "books" table) :D
 		
 	}
 	
 	public static void removeBook(Connection connection,  String table, int bookID) {
 		// UPDATE/write
-		// add book
+		// 12/8 ADDITION!!!
+		// remove all rows with bookID from holds table and from checkouts table FIRST
+		// then remove from books table
 		
 	}
 	
 	public static void removePatron(Connection connection,  String table, int patronID) {
 		// update/write
-		//remove patronID
+		// 12/8 ADDITION!!!
+		// remove all rows with patronID from holds table and from checkouts table FIRST
+		// then remove from patrons table
 	}
 	
 	// *** 12/7 made a change here to the parameters
