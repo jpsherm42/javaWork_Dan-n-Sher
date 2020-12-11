@@ -513,5 +513,29 @@ public class DatabaseQueries {
 			return true;
 		} else { return false; }
 	}
+
+	/**
+	 * Gets the table ID corresponding to specific book and patron IDs (assumes that there is ONLY 1 instance of each tuple // no duplicates;
+	 * in the case of duplicates, coding will pick the earliest-entered ID value (highest in table)).
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: String name of table to query; either `holds` or `checkouts`
+	 * @param book_ID: String representation of book_ID in question
+	 * @param patron_ID: String representation of patron_ID in question
+	 * @return ID value as String
+	 */
+	public static String getID(Connection connection, String table, String book_ID, String patron_ID) {
+		String selectQuery = "SELECT ";
+		// enter column name for ID based on table
+		if (table.equals("holds")) {
+			selectQuery += "hold_ID ";
+		} else { // "checkouts"
+			selectQuery += "chkO_ID ";
+		}
+		
+		selectQuery += "FROM " + table + " WHERE book_ID = " + book_ID + " AND patron_ID = " + patron_ID + ";";
+		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"id"});		// column "id" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+		
+		return results[1][0]; 	// value (as String) of hold_ID or check-out ID (chkO_ID)
+	}
 	
 }
