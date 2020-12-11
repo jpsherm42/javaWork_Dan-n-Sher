@@ -51,10 +51,10 @@ public class DatabaseQueries {
 		}
 	}
 	
-	/*
-	 * Prints given ResultSet in window format
-	 * only given columns
-	 * @param resultSet - ResultSet (Object) to print
+	/**
+	 * Creates a 2D array of Strings of the column headers and information returned by query.
+	 * Passes array to displayInWindow for JFrame construction and visualization.
+	 * @param resultSet: ResultSet (Object) to display
 	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
 	 */
 	private static void printResultSetinWindow(ResultSet resultSet, String[] columns) {
@@ -150,6 +150,10 @@ public class DatabaseQueries {
 		
 	}
 	
+	/**
+	 * Displays results of a SELECT query in tabular/grid format along with column headers in JFrame window.
+	 * @param results: 2D array of Strings to be displayed in window.
+	 */
 	public static void displayInWindow(String[][] results) {
 		JFrame frame = new JFrame();	// create window
 		
@@ -268,7 +272,7 @@ public class DatabaseQueries {
 	}
 	
 	/**
-	 * Remove a row/entry from the given table using the condition passed by `keyword` = criterion
+	 * Remove a row/entry from the given table using the condition passed (`keyword` = criterion)
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: Name of table to remove from
 	 * @param keyword: Name column to apply criterion to / use for condition (will always be `book_ID` or `patron_ID`)
@@ -291,7 +295,7 @@ public class DatabaseQueries {
 	}
 	
 	/**
-	 * 
+	 * Updates a column's value for a row/entry in the given table using the condition passed (`keyword` = criterion).
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: Name of table to update
 	 * @param column: Name column to update value for
@@ -315,7 +319,7 @@ public class DatabaseQueries {
 	
 	/**
 	 * Writes to a database using the passed PreparedStatement--executes update and then closes.
-	 * Other methods construct the specific PreparedStatement necessary to perform the desired action.
+	 * Other methods must construct and pass the specific PreparedStatement necessary to perform the desired action.
 	 * @param preparedStatement: PreparedStatement to execute
 	 * @return rowsAffected:  The number of rows affected by the update.
 	 */
@@ -331,39 +335,9 @@ public class DatabaseQueries {
 		return rowsAffected;
 	}
 	
-	
-	/*
-	 * for testing purposes
-	 */
-	public static void main(String[] args) {
-		Connection connection = DatabaseConnection.openDatabase();
-		
-		String table = "patrons";
-		String[] bookValues = {"fake title", "fake author", "fake genre"};
-		String[] patronValues = {"fake first", "fake last"};
-		String column = "checkedOut";
-		String value = "false";
-		String keyword = "patron_ID";
-		String criterion = "11";
-		
-		String selectQuery = "SELECT title, author FROM books;";
-		String[] columns = {"Title", "Author"};
-		
-		
-		printFromDatabase(connection, selectQuery, columns);
-		
-		
-		// ***** SAVE - CONVERT DATE TO STRING IN GIVEN FORMAT
-		// FROM :  https://www.javatpoint.com/java-date-to-string
-		java.util.Date date = java.util.Calendar.getInstance().getTime();  
-		java.text.DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd");  
-		String strDate = dateFormat.format(date);
-		
-		
-	}
-	
 	/**
-	 * Perform SELECT query with connection to database
+	 * Perform SELECT query with connection to database. Calls getResultSetArray, which constructs that actual 2D array that is returned.
+	 * Very similar to printFromDatabase in form/function.
 	 * @param connection: Connection (Object) to use for database
 	 * @param selectQuery: String of SELECT query language
 	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
@@ -381,9 +355,11 @@ public class DatabaseQueries {
 			//execute query and get result set
 			ResultSet resultSet = preparedStatement.executeQuery();
 			
+			String[][] results = getResultSetArray(resultSet, columns);
+			
 			resultSet.close();
 			preparedStatement.close();
-			return DatabaseQueries.getResultSetArray(resultSet, columns);	// 2D array
+			return results;
 			
 		} catch (SQLException SQLe) {
 			SQLe.printStackTrace();
@@ -393,7 +369,7 @@ public class DatabaseQueries {
 	
 	/**
 	 * Converts given ResultSet to String[][] array based on passed column names.
-	 * @param resultSet - ResultSet (Object) to print
+	 * @param resultSet: ResultSet (Object) to print
 	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
 	 * @return results: 2D array of Strings containing the results from a Select query; if no results returned, returns *null*!
 	 */
