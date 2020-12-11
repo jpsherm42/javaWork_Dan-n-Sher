@@ -181,6 +181,37 @@ public class Patron {
 	}
 	
 	
+	/**
+	 * Get a list of books not on hold by Patron by performing a SELECT query on the database (read, display results).
+	 * Must be called on a Patron object in order to access the patron's specific ID.
+	 * @param connection: Connection (Object) to use for database
+	 * @param view:  Name of view to be queried (should always be holdsview)
+	 * @param view:  Name of table to join on (should always be books)
+	 */
+	public void getUnheldBooks(Connection connection, String view, String table) {
+		
+		// declare/intialize variables with useless values for now
+		String selectQuery = "";
+		String[] returnColumns = {"Title", "Author", "Genre", "Available"};
+		
+		// First uses a subquery to find all holds of this specific patron in holdsview.
+		// Then joins that selection with the books table, preserving all book rows
+		selectQuery = "SELECT book.title AS title, book.author AS author, book.genre AS genre, NOT book.checkedOut AS Available"
+				+ " FROM (SELECT * FROM " + view
+					+ " WHERE patron_ID = " + this.id + ") AS holds"
+				+ " RIGHT JOIN " + table + "AS books"
+				+ " ON holds.book_ID = books.book_ID"
+				+ " WHERE holds.patron_ID != " + this.id
+				+ " SORT BY title, author;";
+	
+		
+		// read from db; calls printResults method (results displayed in window)
+		DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+		
+	}
+	
+	
+	
 	public void changeBookStatusTrue(Connection connection, String table, int book_ID) {
 		// used when placing a hold or check a book out
 		// this method will call call addToTable on holds/checkouts and then updateTable on books (status) and on patrons (numbers)
