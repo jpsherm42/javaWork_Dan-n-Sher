@@ -1,10 +1,19 @@
 package lms;
 
 import java.sql.Connection;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class LibraryManagementSystem {
 	
 	public static void main(String[] args) {
+		
+		
+		
+		
+		
+		
+		// ** USE CASE/default
 		
 		/*
 		// open db connection
@@ -60,6 +69,7 @@ public class LibraryManagementSystem {
 	 * lib: remove patron - get patron id (if pair exists, etc.)
 	 * 
 	 * 
+	 * patron - default search keyword is Title
 	 * 
 	 * FUNCTIOn: getting an iD based on tuple; if it doens't exist, give a nasty message
 	 */
