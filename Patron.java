@@ -217,104 +217,159 @@ public class Patron {
 		// read from db; calls printResults method (results displayed in window)
 		DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
 		
-	}
+	}	
 	
-	//// ** be mindful when passing date that it's passed as a string in the form : YYYY-MM-DD
-	// TODO: javadoc
-	public void placeHold(Connection connection, int book_ID) {
-		// TODO
-		//(call changeTrue) -- depending on how selection of book is made, may need to check that a book exists BEFORE passing to method
-	}
-	
-	//TODO: javadoc
-	public void removeHold(Connection connection, int book_ID) {
-		// TODO
-		// (call changeFalse); notes:?: if book ID is NOT in holds table -> i think that means remove the book id/patron id pair from hold first before updating patron info	
-	}
-	
-	//TODO: javadoc
-	public void checkOutBook(Connection connection, int book_ID) {
-		// TODO
-		// check out book (call changeTrue) -- see notes for place hold!
-	}
-	
-	//TODO: javadoc
-	public void returnBook(Connection connection, int book_ID) {
-		// TODO
-		// return book (call changeFalse): search criterion is bookID
-	}
-	
-	// TODO: javadoc
-	public void changeBookStatusTrue(Connection connection, String table, int book_ID) {
-		// TODO
-		// used when placing a hold or check a book out
-		// this method will call call addToTable on holds/checkouts and then updateTable on books (status) and on patrons (numbers)
-		
-		// UPDATE/write query
-		
-		// pass connx, query to write method
-		// if table = holds, then colum = on_hold? 
-		// if talbe = checkedout, then column  = checked_out?
-		//UPDATE books.book_ID, books.column = true
-		
-		//UPDATE TABLE -- check to make sure that book_ID, this.ID tuple doesnt already exist
-		// add to table: book_ID, this.ID, timedate.now()
-	
-	}
-	
-	// TODO: javadoc
-	public void changeBookStatusFalse(Connection connection, String table, int book_ID) {
-		// TODO
-		// used when removing hold or returning book
-		// this method will call removeFromTable on Holds/checkouts and then updateTable on books (status) and on patrons (numbers)
-		
-		// UPDATE/write query
-		
-		// pass connx, query to write method
-		// if table = holds, then colum = on_hold? 
-		// if talbe = checkedout, then column  = checked_out?
-		//UPDATE books.book_ID, books.column = False
-		
-		//UPDATE TABLE
-		// REMOVE FROM table: book_ID, this.ID (there's only going to be one instance of this tuple)s
-		
-	}
-	
-	// SETTER METHODS
 	/**
-	 * Increases a patron's number of holds (variable) by 1.
-	 * Updates value in database (calls updateColumn method) 
+	 * Places a book on hold for the specific patron (the user). First checks that the book is not already on hold by the patron requesting the hold.
+	 * If so, gives warning. Otherwise, updates the patron's number of books on hold in Java and the database;
+	 * adds a row to the `holds` table and updates the book's `onHold` column to reflect true (regardless of what the value was before the update);
+	 * shows user "success" message/window.
+	 * @param connection: Connection (Object) to use for database
+	 * @param book_ID: String representation of book_ID in question
 	 */
-	public void incNumHolds(Connection connection) {
+	public void placeHold(Connection connection, String book_ID) {	
+		// get book title
+		String title = DatabaseQueries.getBookTitle(connection, book_ID);
+		
+		// check if book_ID/patron_ID tuple already exists in database
+		if (DatabaseQueries.bookPatronPairExists(connection, "holds", book_ID, this.id)) {
+			// display error message/window
+			JOptionPane.showMessageDialog(null, "You have already placed " + title + " (ID: " + book_ID + ") on hold.\nIf you want to place a book on hold, select \"Hold: Place\" on main patron page and enter a different ID.", "BOOK ALREADY ON-HOLD", JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		
+		// else...
+		// update patron's info in Java and db
 		this.numHolds += 1;
 		DatabaseQueries.updateColumn(connection, "patron", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
+
+		// make date string to pass
+		String dateAsString = DatabaseQueries.getTodaysDateAsString();
+		String[] values = {book_ID, this.id, dateAsString};
+		
+		// add row to holds table
+		DatabaseQueries.addToTable(connection, "holds", values);
+		// update book's row in books table
+		DatabaseQueries.updateColumn(connection, "books", "onHold", "true", "book_ID", book_ID);
+		
+		// display message
+		JOptionPane.showMessageDialog(null, title + " (ID: " + book_ID + ") placed on hold!\nIf this was a mistake, select \"Hold: Remove\" on main patron page and enter this book's ID again.\nIf you want to place another book on hold, select \"Hold: Place\" on main patron page again and enter another book ID.", "BOOK PLACED ON-HOLD", JOptionPane.INFORMATION_MESSAGE);
+			
 	}
 	
 	/**
-	 * Decreases a patron's number of holds (variable) by 1.
-	 * Updates value in database (calls updateColumn method) 
+	 * Checks out a book to a specific patron (the user). First checks that the book is not already checked out by the patron requesting it.
+	 * If so, gives warning. Otherwise, updates the patron's number of books checked out in Java and the database;
+	 * adds a row to the `checkouts` table and updates the book's `checkedOut` column to reflect true (regardless of what the value was before the update);
+	 * shows user "success" message/window.
+	 * @param connection: Connection (Object) to use for database
+	 * @param book_ID: String representation of book_ID in question
 	 */
-	public void decNumHolds(Connection connection) {
-		this.numHolds -= 1;
-		DatabaseQueries.updateColumn(connection, "patron", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
-	}
-	
-	/**
-	 * Increases a patron's number of books out (variable) by 1.
-	 * Updates value in database (calls updateColumn method) 
-	 */
-	public void incNumBooksOut(Connection connection) {
+	public void checkOutBook(Connection connection, String book_ID) {
+		// get book title
+		String title = DatabaseQueries.getBookTitle(connection, book_ID);
+		
+		// check if book_ID/patron_ID tuple already exists in database
+		if (DatabaseQueries.bookPatronPairExists(connection, "checkouts", book_ID, this.id)) {
+			// display error message/window
+			JOptionPane.showMessageDialog(null, "You've already checked out " + title + " (ID: " + book_ID + ").\nIf you want to check out a book, select \"Check Out Book\" on main patron page again and enter a different ID.", "BOOK ALREADY CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);
+			return;
+		}
+		
+		// else...
+		// update patron's info in Java and db
 		this.numBooksOut += 1;
 		DatabaseQueries.updateColumn(connection, "patron", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
+
+		// make date string to pass
+		String dateAsString = DatabaseQueries.getTodaysDateAsString();
+		String[] values = {book_ID, this.id, dateAsString};
+		
+		// add row to holds table
+		DatabaseQueries.addToTable(connection, "checkouts", values);
+		// update book's row in books table
+		DatabaseQueries.updateColumn(connection, "books", "checkedOut", "true", "book_ID", book_ID);
+		
+		// display message
+		JOptionPane.showMessageDialog(null, title + " (ID: " + book_ID + ") checked out!\nIf this was a mistake, select \"Check In (Return) Book\" on main patron page and enter this book's ID again.\nIf you want to check out another book, select \"Check Out Book\" on main patron page again and enter another book ID.", "BOOK CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);
+	}
+		
+	/**
+	 * Removes a hold on a book for a specific patron (the user). Verifies that the book-patron pair exists in the `holds` table.
+	 * If so, decrease's patron's numHolds in Java and database; removes row from `holds` table.
+	 * Checks whether there are other holds on the book in question; if NOT, changes book's `onHold` column to false.
+	 * Gives message to user.
+	 * If the book-patron pair does not exist, gives user message.
+	 * @param connection: Connection (Object) to use for database
+	 * @param book_ID: String representation of book_ID in question
+	 */
+	public void removeHold(Connection connection, String book_ID) {
+		// get book title
+		String title = DatabaseQueries.getBookTitle(connection, book_ID);
+		
+		// verify that the book-patron pair exists in the holds table
+		if (DatabaseQueries.bookPatronPairExists(connection, "holds", book_ID, this.id)) { // if so...
+			// update patron's info in Java and db
+			this.numHolds -= 1;
+			DatabaseQueries.updateColumn(connection, "patron", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
+			
+			// get hold ID based on book-patron pair
+			String hold_ID = DatabaseQueries.getID(connection, "holds", book_ID, this.id);
+			
+			// remove row from holds table
+			DatabaseQueries.removeFromTable(connection, "holds", "hold_ID", hold_ID);
+			
+			// update book's row in books table IF the book ID does not show up in the holds table any more (since multiple patrons can place holds on the same book)
+			if (!DatabaseQueries.checkForBook(connection, "holds", book_ID)) {	// only take action if this returns false (book NOT in table), so use !
+				DatabaseQueries.updateColumn(connection, "books", "onHold", "false", "book_ID", book_ID);
+				// print msg to console (just for the sake of this program for full transparency)
+				System.out.println("ADDITION TO LIBRARIAN LOG: " + DatabaseQueries.getTodaysDateAsString() + " No more holds on " + title + " (ID: " + book_ID + ").");
+			}
+			
+			// display message
+			JOptionPane.showMessageDialog(null, "Removed hold on " + title + " (ID: " + book_ID + ").\nIf this was in error, select \"Hold: Place\" on main patron page and enter this book's ID again.\nIf you want to remove a hold on another book, select \"Hold: Remove\" on main patron page again and enter another book ID.", "BOOK HOLD REMOVED", JOptionPane.INFORMATION_MESSAGE);		
+		} else {
+			// give message
+			JOptionPane.showMessageDialog(null, "You have not placed a hold on " + title + " (ID: " + book_ID + ") on hold.\nIf you want to place it on hold, select \"Hold: Place\" on the main patron page and enter the ID again.", "BOOK NOT ON-HOLD", JOptionPane.INFORMATION_MESSAGE);			
+		}
+		
 	}
 	
 	/**
-	 * Decreases a patron's number of books out (variable) by 1.
-	 * Updates value in database (calls updateColumn method) 
+	 * Returns a book check out by a specific patron (the user). Verifies that the book-patron pair exists in the `checkouts` table.
+	 * If so, decrease's patron's numBooksOut in Java and database; removes row from `checkouts` table.
+	 * Changes book's `checkedOut` column to false.
+	 * Gives message to user.
+	 * If the book-patron pair does not exist, gives user message.
+	 * @param connection: Connection (Object) to use for database
+	 * @param book_ID: String representation of book_ID in question
 	 */
-	public void decNumBooksOut(Connection connection) {
-		this.numBooksOut -= 1;
-		DatabaseQueries.updateColumn(connection, "patron", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
+	public void returnBook(Connection connection, String book_ID) {
+		// get book title
+		String title = DatabaseQueries.getBookTitle(connection, book_ID);
+		
+		// verify that the book-patron pair exists in the holds table
+		if (DatabaseQueries.bookPatronPairExists(connection, "checkouts", book_ID, this.id)) { // if so...
+			// update patron's info in Java and db
+			this.numBooksOut -= 1;
+			DatabaseQueries.updateColumn(connection, "patron", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
+			
+			// get chkO_ID based on book-patron pair
+			String checkOut_ID = DatabaseQueries.getID(connection, "checkouts", book_ID, this.id);
+			
+			// remove row from checkouts table
+			DatabaseQueries.removeFromTable(connection, "checkouts", "chkO_ID", checkOut_ID);
+			
+			// update book's row in books table
+			DatabaseQueries.updateColumn(connection, "books", "checkedOut", "false", "book_ID", book_ID);
+			
+			// display message
+			JOptionPane.showMessageDialog(null, title + " (ID: " + book_ID + ") returned.\nIf this was in error, select \"Check Out Book\" on the main patron page and enter this book's ID again.\nIf you want to return another book, select \"Check In (Return) Book\" on main patron page again and enter another book ID.", "BOOK RETURNED", JOptionPane.INFORMATION_MESSAGE);
+			
+		} else {
+			// give message
+			JOptionPane.showMessageDialog(null, "You have not checked out " + title + " (ID: " + book_ID + ").\nIf you want check it out, select \"Check Out Book\" on the main patron page and enter this book's ID again.", "BOOK NOT CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);			
+		}
 	}
 	
 	// GETTER METHODS
