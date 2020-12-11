@@ -5,7 +5,6 @@ import java.sql.SQLException;
 
 /**
  * Manages database connection
- * @author sherm
  */
 public class DatabaseConnection {
 	
