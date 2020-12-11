@@ -126,19 +126,19 @@ public class DatabaseQueries {
 		        	}
 		        }
 							
-		        // print using method
+		        // show in window using method
 		        displayInWindow(results);    
 		        
 		        
-		        
-		        // ***************** CHANGE THIS TO A MESSAGE WINDOW ******* *******************************************************************************************
+		        // console print version
+		        /*
 		        for (int r = 0; r < results.length; r++) {
 					for (int c = 0; c < results[r].length; c++) {
 						System.out.print(results[r][c] + "__");
 					}
 					System.out.print("\n");
 				}
-		        
+		        */
 				
 			} else {		// not results returned
 				JOptionPane.showMessageDialog(null, "There are no entries to display for the given search criteria.", "Query Results", JOptionPane.INFORMATION_MESSAGE);
@@ -454,6 +454,19 @@ public class DatabaseQueries {
 				return null;
 		}
 		
+	}
+	
+	/**
+	 * Converts current (today's) date to String with specified format.
+	 * @return strDate: today's date in the form "YYYY-MM-dd" (e.g. 2020-12-15 for Dec. 15th, 2020)
+	 */
+	public static String getTodaysDateAsString() {
+		// CONVERT DATE TO STRING IN GIVEN FORMAT
+		// FROM :  https://www.javatpoint.com/java-date-to-string
+		java.util.Date date = java.util.Calendar.getInstance().getTime();  
+		java.text.DateFormat dateFormat = new SimpleDateFormat("YYYY-MM-dd");  
+		String strDate = dateFormat.format(date);
+		return strDate;
 	}
 	
 }
