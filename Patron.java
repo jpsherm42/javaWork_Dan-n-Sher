@@ -8,39 +8,80 @@ import java.sql.SQLException;
  * Class for Patron objects; primarily for accessing the database and using the program as a Patron.
  * This serves as a Class more than an object; organizes functions specific to patrons (vs. to librarians).
  * Constructor adds new patrons to db.
- * @author sherm
  *
  */
 public class Patron {
 	
-	//instance variables **** MAKE GETTER METHODS
-	private int id = 11; 		// ********************************************************
+	// INSTANCE VARIABLES
+	/**
+	 * Patron's unique ID number stored as a String since this value will not change.
+	 * (Database construction sets the minimum ID value at 10.)
+	 */
+	private String id;
+	
+	/**
+	 * Patron's first name.
+	 */
 	private String firstName;
+	/**
+	 * Patron's last name.
+	 */
 	private String lastName;
+	
+	/**
+	 * The number of books that a patron has on hold.
+	 */
 	private int numHolds;
+	
+	/**
+	 * The number of books that a patron has checked out.
+	 */
 	private int numBooksOut;
 	
-	//static variables **** MAKE GETTER METHODS
+	//static variables
+	
+	/**
+	 * The max number of books a patron can have checked out.
+	 * For the case of this project, all patrons are given the same max number.
+	 */
 	private static int MAX_BOOKS = 10;
+	
+	/**
+	 * The max number of books a patron can have on hold.
+	 * For the case of this project, all patrons are given the same max number.
+	 */
 	private static int MAX_HOLDS = 25;
 	
-	//constructor (instantiates the instance variables by getting info from database)
-	public Patron(Connection connection, String table, String firstName, String lastName){
-		// get all the info from the patron table based on the passed name
+	// CONSTRUCTOR
+	/**
+	 * Creates Patron (Java) Object that corresponds to a single row in the `patrons` table of the database.
+	 * Instantiates instance variables from results of db query, which allows for Java code to easily/quickly access information about a patron
+	 * (instead of continually calling on the database for a single value).
+	 * @param connection: Connection (Object) to use for database
+	 * @param id: integer value as a String corresponding to the unique identifier for a patron.
+	 */
+	public Patron(Connection connection, String id){
+		this.id = id;
 		
-		// if patron doesn't exist (first and last name don't exist), make one
-		addPatron(connection, table, this); // make sure we set the instance variables first
-		// ** call addPatron() (which adds to the database )
-		//this.id = 	// ** auto populates ID then let it do it's job and then ask the database for it
-		// alternate : max(ID's) + 1
+		// construct SELECT query
+		String getPatronInfoQuery = "SELECT firstName, lastName, numBooksOut, numHolds, totalFineAmount FROM patrons WHERE patron_ID = " + id + ";";
+		
+		String[] columns = {"firstName", "lastName", "numBooksOut", "numHolds", "totalFineAmount"};
+		// pass to db and get results back
+		String[][] patronInfo = DatabaseQueries.readFromDatabase(connection, getPatronInfoQuery, columns);
+		
 		
 	}
 	
-	// reconsider access modifier (for use as librarian)
-	// THIS ADDS IT TO THE DATABASE
-	private static void addPatron(Connection connection, String table, Patron patron) {
+	// THIS ADDS IT TO THE DATABASE//calls constructor to instantiate variables
+	public static void createPatron(Connection connection) {
 		// update/write
 		//add patron using patron.firstName, patron.whatever
+		// if patron doesn't exist (first and last name don't exist), make one
+				//addPatron(connection, table, this); // make sure we set the instance variables first
+				// ** call addPatron() (which adds to the database )
+				//this.id = 	// ** auto populates ID then let it do it's job and then ask the database for it
+				// alternate : max(ID's) + 1
 		
 	}
 	
