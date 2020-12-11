@@ -506,10 +506,10 @@ public class DatabaseQueries {
 	 * @param book_ID: String representation of book_ID in question
 	 * @return boolean value: true if the ID exists; false otherwise
 	 */
-	public static boolean checkForBook(Connection connection, String book_ID) {
-		String selectQuery = "SELECT COUNT(*) FROM books WHERE book_ID = " + book_ID + ";";
+	public static boolean checkForBook(Connection connection, String table, String book_ID) {
+		String selectQuery = "SELECT COUNT(*) FROM " + table + " WHERE book_ID = " + book_ID + ";";
 		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"count"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
-		if (results[1][0].equals("1")) {	// book_ID's are the key and therefore unique; count will either be 1 or 0
+		if (Integer.parseInt(results[1][0]) > 0) {	// used for all tables with book IDs, so there could be multiple
 			return true;
 		} else { return false; }
 	}
