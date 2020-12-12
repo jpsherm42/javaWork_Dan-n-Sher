@@ -1,9 +1,6 @@
 package lms;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-
 import javax.swing.JOptionPane;
 
 /**
@@ -78,7 +75,7 @@ public class Patron {
 		// pass to db and get results back
 		String[][] patronInfo = DatabaseQueries.readFromDatabase(connection, getPatronInfoQuery, columns);		// returns 2 x 5 array; results are in row index 1
 		
-		if (patronInfo == null) {	// id passed does not exist in the db or some other error occured
+		if (patronInfo == null || patronInfo.length == 1) {	// id passed does not exist in the db (length = 1) or some other error occurred
 			JOptionPane.showMessageDialog(null,"Invalid entry! Patron ID " + id + " does not exist.\nPlease try again or for a new user, create a new profile.", "Error!", JOptionPane.INFORMATION_MESSAGE);
 			return;	// exit constructor
 		}
@@ -101,7 +98,7 @@ public class Patron {
 	 * @param lastName: of patron
 	 */
 	public static void createPatron(Connection connection, String firstName, String lastName) {
-		DatabaseQueries.addToTable(connection, "patron", new String[]{firstName, lastName});		
+		DatabaseQueries.addToTable(connection, "patrons", new String[]{firstName, lastName});		
 	}
 	
 	/**
@@ -113,25 +110,25 @@ public class Patron {
 	 * @param keyword: Name of column (`title`, `author`, or `genre`) (based on user input) to apply criterion to
 	 * @param criterion: Search input from user
 	 */
-	public static void bookSearch(Connection connection, String table, String keyword, String criterion) {
+	public static void bookSearch(Connection connection, String keyword, String criterion) {
 		
-		String[] returnColumns = {"ID", "Title", "Author", "Available"};
+		String[] returnColumns = {"Book ID", "Title", "Author", "Available"};
 		
 		// if no search criteria passed, display all books (call that method)
 		if (keyword == null || keyword == "" || criterion == null || criterion == "") {
-			getAllBooks(connection, table, returnColumns);
+			getAllBooks(connection, "books", returnColumns);
 			return;
 		}
 		
 		// construct query string
-		String searchQuery = "SELECT book_ID, title, author, NOT checkedOut AS Available "
-				+ "FROM " + table + " "
+		String searchQuery = "SELECT book_ID AS \"Book ID\", title, author, NOT checkedOut AS Available "
+				+ "FROM books "
 				+ "WHERE " + keyword + " = \"" + criterion + "\" "
 						+ "ORDER BY title, author;";
 		//System.out.println(searchQuery);			// in case you want to print it to see it
 		
 		// read from db; calls printResults method (results displayed in window)
-		DatabaseQueries.readFromDatabase(connection, searchQuery, returnColumns);
+		DatabaseQueries.printFromDatabase(connection, searchQuery, returnColumns);
 		
 	}
 	
@@ -144,13 +141,13 @@ public class Patron {
 	 */
 	private static void getAllBooks(Connection connection, String table, String[] returnColumns) {
 		// construct query string
-		String allBooksQuery = "SELECT book_ID, title, author, NOT checkedOut AS Available "
+		String allBooksQuery = "SELECT book_ID AS \"Book ID\", title, author, NOT checkedOut AS Available "
 				+ "FROM " + table
 				+ " ORDER BY title, author;";
 		//System.out.println(allBooksQuery);			// in case you want to print it to see it
 		
 		// read from db; calls printResults method (results displayed in window)
-		DatabaseQueries.readFromDatabase(connection, allBooksQuery, returnColumns);
+		DatabaseQueries.printFromDatabase(connection, allBooksQuery, returnColumns);
 		
 	}
 	
@@ -169,20 +166,20 @@ public class Patron {
 		
 		// conditions for which view table since we want to display different columns
 		if (view.equals("holdsview")) {
-			selectQuery = "SELECT book_ID, title, author "
+			selectQuery = "SELECT book_ID AS \"Book ID\", title, author "
 					+ "FROM " + view
 					+ " WHERE patron_ID = " + this.id 
-					+ " SORT BY title;";
+					+ " ORDER BY `title`;";
 			//System.out.println(selectQuery);			// in case you want to print it to see it
 			
 			// give value/meaning to array
 			returnColumns = new String[]{"Book ID", "Title", "Author"};
 			
 		} else {		// checkoutsview
-			selectQuery = "SELECT book_ID, title, author, dueDate, daysLate AS `Days Overdue`, fineAmount AS Fine "
+			selectQuery = "SELECT book_ID AS \"Book ID\", title, author, dueDate AS `Due Date`, daysLate AS `Days Overdue`, fineAmount AS Fine "
 					+ "FROM " + view
 					+ " WHERE patron_ID = " + this.id 
-					+ " SORT BY dueDate, title;";
+					+ " ORDER BY `Due Date`, `title`;";
 			//System.out.println(selectQuery);			// in case you want to print it to see it
 			
 			// give value/meaning to array
@@ -190,13 +187,14 @@ public class Patron {
 		}
 		
 		// read from db; calls printResults method (results displayed in window)
-		DatabaseQueries.readFromDatabase(connection, selectQuery, returnColumns);
+		DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
 		
 	}
 
 	/**
 	 * Get a list of books not on hold by Patron by performing a SELECT query on the database (read, display results).
 	 * Must be called on a Patron object in order to access the patron's specific ID.
+	 * This does NOT indicate if a book is checked out to the particular patron that called the function. In practice, since this program does not have a renew option, this would allow for placing a hold for a book again even when it is checked out to you already.
 	 * @param connection: Connection (Object) to use for database
 	 */
 	public void getUnheldBooks(Connection connection) {
@@ -206,7 +204,7 @@ public class Patron {
 		
 		// First uses a subquery to find all holds of this specific patron in holdsview.
 		// Then join that selection with the books table, preserving all book rows
-		selectQuery = "SELECT books.book_ID , books.title, books.author, books.genre, NOT books.checkedOut AS Available "
+		selectQuery = "SELECT books.book_ID AS \"Book ID\", books.title, books.author, books.genre, NOT books.checkedOut AS Available "
 				+ "FROM (SELECT * FROM holdsview WHERE patron_ID = " + this.id + ") AS holds "
 				+ "RIGHT JOIN books "
 				+ "ON holds.book_ID = books.book_ID "
@@ -241,7 +239,8 @@ public class Patron {
 		// else...
 		// update patron's info in Java and db
 		this.numHolds += 1;
-		DatabaseQueries.updateColumn(connection, "patron", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
+		DatabaseQueries.updateColumn(connection, "patrons", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
+		
 
 		// make date string to pass
 		String dateAsString = DatabaseQueries.getTodaysDateAsString();
@@ -279,7 +278,7 @@ public class Patron {
 		// else...
 		// update patron's info in Java and db
 		this.numBooksOut += 1;
-		DatabaseQueries.updateColumn(connection, "patron", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
+		DatabaseQueries.updateColumn(connection, "patrons", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
 
 		// make date string to pass
 		String dateAsString = DatabaseQueries.getTodaysDateAsString();
@@ -311,7 +310,7 @@ public class Patron {
 		if (DatabaseQueries.bookPatronPairExists(connection, "holds", book_ID, this.id)) { // if so...
 			// update patron's info in Java and db
 			this.numHolds -= 1;
-			DatabaseQueries.updateColumn(connection, "patron", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
+			DatabaseQueries.updateColumn(connection, "patrons", "numHolds", Integer.toString(this.numHolds), "patron_ID", this.id);
 			
 			// get hold ID based on book-patron pair
 			String hold_ID = DatabaseQueries.getID(connection, "holds", book_ID, this.id);
@@ -330,7 +329,7 @@ public class Patron {
 			JOptionPane.showMessageDialog(null, "Removed hold on " + title + " (ID: " + book_ID + ").\nIf this was in error, select \"Hold: Place\" on main patron page and enter this book's ID again.\nIf you want to remove a hold on another book, select \"Hold: Remove\" on main patron page again and enter another book ID.", "BOOK HOLD REMOVED", JOptionPane.INFORMATION_MESSAGE);		
 		} else {
 			// give message
-			JOptionPane.showMessageDialog(null, "You have not placed a hold on " + title + " (ID: " + book_ID + ") on hold.\nIf you want to place it on hold, select \"Hold: Place\" on the main patron page and enter the ID again.", "BOOK NOT ON-HOLD", JOptionPane.INFORMATION_MESSAGE);			
+			JOptionPane.showMessageDialog(null, "You have not placed a hold on " + title + " (ID: " + book_ID + ").\nIf you want to place it on hold, select \"Hold: Place\" on the main patron page and enter the ID again.", "BOOK NOT ON-HOLD", JOptionPane.INFORMATION_MESSAGE);			
 		}
 		
 	}
@@ -352,7 +351,7 @@ public class Patron {
 		if (DatabaseQueries.bookPatronPairExists(connection, "checkouts", book_ID, this.id)) { // if so...
 			// update patron's info in Java and db
 			this.numBooksOut -= 1;
-			DatabaseQueries.updateColumn(connection, "patron", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
+			DatabaseQueries.updateColumn(connection, "patrons", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
 			
 			// get chkO_ID based on book-patron pair
 			String checkOut_ID = DatabaseQueries.getID(connection, "checkouts", book_ID, this.id);

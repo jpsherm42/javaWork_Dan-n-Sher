@@ -478,9 +478,9 @@ public class DatabaseQueries {
 	 * @return boolean value: true if the pair exists; false otherwise
 	 */
 	public static boolean bookPatronPairExists(Connection connection, String table, String book_ID, String patron_ID) {
-		String selectQuery = "SELECT COUNT(*) FROM " + table + " WHERE book_ID = " + book_ID + "AND patron_ID = " + patron_ID + ";";
+		String selectQuery = "SELECT COUNT(*) FROM " + table + " WHERE book_ID = " + book_ID + " AND patron_ID = " + patron_ID + ";";
 		
-		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"count"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"COUNT(*)"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
 		if (Integer.parseInt(results[1][0]) > 0) {	// in case some how there are duplicates
 			return true;	// pair exists
 		} else { return false; }
@@ -508,7 +508,7 @@ public class DatabaseQueries {
 	 */
 	public static boolean checkForBook(Connection connection, String table, String book_ID) {
 		String selectQuery = "SELECT COUNT(*) FROM " + table + " WHERE book_ID = " + book_ID + ";";
-		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"count"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"COUNT(*)"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
 		if (Integer.parseInt(results[1][0]) > 0) {	// used for all tables with book IDs, so there could be multiple
 			return true;
 		} else { return false; }
@@ -527,9 +527,9 @@ public class DatabaseQueries {
 		String selectQuery = "SELECT ";
 		// enter column name for ID based on table
 		if (table.equals("holds")) {
-			selectQuery += "hold_ID ";
+			selectQuery += "hold_ID AS id ";
 		} else { // "checkouts"
-			selectQuery += "chkO_ID ";
+			selectQuery += "chkO_ID AS id ";
 		}
 		
 		selectQuery += "FROM " + table + " WHERE book_ID = " + book_ID + " AND patron_ID = " + patron_ID + ";";
