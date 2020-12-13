@@ -145,8 +145,9 @@ public class Patron {
 	 * @param table: Name of table to be queried (in this case it should always be `books`)
 	 * @param keyword: Name of column (`title`, `author`, or `genre`) (based on user input) to apply criterion to
 	 * @param criterion: Search input from user
+	 * @param printOption: String representing which type of print option the user wants; "window" or "console" are the two options.
 	 */
-	public static void bookSearch(Connection connection, String keyword, String criterion) {
+	public static void bookSearch(Connection connection, String keyword, String criterion, String printOption) { //added printOption
 		
 		String[] returnColumns = {"Book ID", "Title", "Author", "Available"};
 		
@@ -163,8 +164,14 @@ public class Patron {
 						+ "ORDER BY title, author;";
 		//System.out.println(searchQuery);			// in case you want to print it to see it
 		
-		// read from db; calls printResults method (results displayed in window)
-		DatabaseQueries.printFromDatabase(connection, searchQuery, returnColumns);
+		if (printOption.equals("console")) {
+			String [][] results = DatabaseQueries.readFromDatabase(connection, searchQuery, returnColumns); // added this and if/else statement
+			DatabaseQueries.consoleDisplay(results);
+			System.out.println();	// added blank line
+		} else {
+			// read from db; calls printResults method (results displayed in window)
+			DatabaseQueries.printFromDatabase(connection, searchQuery, returnColumns);
+		}
 		
 	}
 	
@@ -236,8 +243,9 @@ public class Patron {
 	 * Must be called on a Patron object in order to access the patron's specific ID.
 	 * @param connection: Connection (Object) to use for database
 	 * @param view:  Name of view to be queried
+	 * @param printOption: String representing which type of print option the user wants; "window" or "console" are the two options.
 	 */
-	public void getPatronBooks(Connection connection, String view) {
+	public void getPatronBooks(Connection connection, String view, String printOption) {	// added String printOption
 		
 		// declare/initialize variables with useless values for now
 		String selectQuery = "";
@@ -266,8 +274,15 @@ public class Patron {
 		}
 		
 		if (!selectQuery.equals("") && returnColumns != null) {		// in case there are issues with the view string
-			// read from db; calls printResults method (results displayed in window)
-			DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+			if (printOption.equals("console")) {
+				String [][] results = DatabaseQueries.readFromDatabase(connection, selectQuery, returnColumns); // added this and if/else statement
+				DatabaseQueries.consoleDisplay(results);
+				System.out.println();	// added blank line
+			} else {
+				// read from db; calls printResults method (results displayed in window)
+				DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+			}
+
 		}
 
 		
@@ -294,8 +309,10 @@ public class Patron {
 				+ "ORDER BY title, author;";
 		
 		String[] returnColumns = {"Book ID", "Title", "Author", "Genre", "Available"};
-		// read from db; calls printResults method (results displayed in window)
-		DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+		// read from db; print list
+		String [][] results = DatabaseQueries.readFromDatabase(connection, selectQuery, returnColumns); // added
+		DatabaseQueries.consoleDisplay(results);		//DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+		System.out.println();	// added blank line
 		
 	}	
 	
@@ -363,7 +380,7 @@ public class Patron {
 		if (DatabaseQueries.bookAvailable(connection, book_ID)) {
 			// if book was on hold by patron (b-p pair in `holds` table), remove hold.
 			if (DatabaseQueries.bookPatronPairExists(connection, "holds", book_ID, this.id)) {
-				System.out.println("Removing " + title + " (ID: " + book_ID + ") from your holds list.");
+				System.out.println("Removing " + title + " (ID: " + book_ID + ") from your holds list.\n");
 				this.removeHold(connection, book_ID);
 			}
 			
@@ -417,7 +434,7 @@ public class Patron {
 			if (!DatabaseQueries.checkForBook(connection, "holds", book_ID)) {	// only take action if this returns false (book NOT in table), so use !
 				DatabaseQueries.updateColumn(connection, "books", "onHold", "false", "book_ID", book_ID);
 				// print msg to console (just for the sake of this program for full transparency)
-				System.out.println("ADDITION TO LIBRARIAN LOG: " + DatabaseQueries.getTodaysDateAsString() + " No more holds on " + title + " (ID: " + book_ID + ").");
+				System.out.println("ADDITION TO LIBRARIAN LOG: " + DatabaseQueries.getTodaysDateAsString() + " No more holds on " + title + " (ID: " + book_ID + ").\n");
 			}
 			
 			// display message
@@ -514,8 +531,7 @@ public class Patron {
 		Button goButton = new Button("GO!");
 		goButton.addActionListener(new ActionListener(){  
 			public void actionPerformed(ActionEvent e){  
-			    //prints option selected       
-				//System.out.println(selectedOption);
+				//System.out.println(selectedOption); //prints option selected
 
 				
 				// actions based on selection
@@ -525,10 +541,10 @@ public class Patron {
 						//WINDOW, drop-down list (keyword = type of search), 1 entry field, search button -> call the printFromDatabase/printResultSetinWindow methods /  see all books button -> getAllBooks
 					    break;
 					case "My Books on Hold":
-						globalPatron.getPatronBooks(globalConnection, "holdsview");
+						globalPatron.getPatronBooks(globalConnection, "holdsview", "window");
 						break;
 					case "My Books Checked Out":
-						globalPatron.getPatronBooks(globalConnection, "checkoutsview");
+						globalPatron.getPatronBooks(globalConnection, "checkoutsview", "window");
 						break;
 					case "Get Book Recommendation":
 						JOptionPane.showMessageDialog(null, "In the console below enter a desired genre, then a random book of that genre will be displayed.", "BOOK RECOMMENDATION", JOptionPane.INFORMATION_MESSAGE);
@@ -556,9 +572,9 @@ public class Patron {
 							// display list of books NOT on hold
 							globalPatron.getUnheldBooks(globalConnection);
 							
-							BufferedReader reader2 = new BufferedReader(new InputStreamReader(System.in));
+							
 							System.out.print("Enter ID of book to hold: ");
-
+							BufferedReader reader2 = new BufferedReader(new InputStreamReader(System.in));
 							try {
 								// get input as String
 								String enteredBookID = reader2.readLine();
@@ -581,7 +597,7 @@ public class Patron {
 					    break;
 					case "Hold: Remove":
 						// display list of books on hold by patron
-						globalPatron.getPatronBooks(globalConnection, "holdsview");
+						globalPatron.getPatronBooks(globalConnection, "holdsview", "console");
 						BufferedReader reader3 = new BufferedReader(new InputStreamReader(System.in));
 						System.out.print("Enter ID of book to remove hold: ");
 
@@ -612,7 +628,8 @@ public class Patron {
 							return;
 						} else {
 							// display list of available books (not checked out)
-							bookSearch(globalConnection, "checkedOut", "0");
+							System.out.println("Books available for checkout--");
+							bookSearch(globalConnection, "checkedOut", "0", "console");
 							
 							BufferedReader reader4 = new BufferedReader(new InputStreamReader(System.in));
 							System.out.print("Enter ID of book to check out: ");
@@ -639,7 +656,7 @@ public class Patron {
 					    break;
 					case "Check In (Return) Book":
 						// display list of books checked out to patron
-						globalPatron.getPatronBooks(globalConnection, "checkoutsview");
+						globalPatron.getPatronBooks(globalConnection, "checkoutsview", "console");
 						BufferedReader reader5 = new BufferedReader(new InputStreamReader(System.in));
 						System.out.print("Enter ID of book to check in (return): ");
 
