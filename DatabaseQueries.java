@@ -158,7 +158,7 @@ public class DatabaseQueries {
 		//panel for results
 		JPanel output = new JPanel();		// create content
 		output.setBackground(Color.WHITE);
-		GridLayout layout = new GridLayout(results.length,results[0].length,0,0);
+		GridLayout layout = new GridLayout(results.length,results[0].length,5,0);
 		output.setLayout(layout);
 	
 		//add titles --> ******** see if we can make these bold or something? *************
