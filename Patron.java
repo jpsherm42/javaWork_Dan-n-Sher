@@ -29,9 +29,9 @@ public class Patron {
 	// INSTANCE VARIABLES
 	/**
 	 * Patron's unique ID number stored as a String since this value will not change.
-	 * (Database construction sets the minimum ID value at 10.)
+	 * (Database construction sets the minimum ID value at 10.) Default value is "00."
 	 */
-	private String id;
+	private String id = "00";
 	
 	/**
 	 * Patron's first name.
@@ -148,6 +148,10 @@ public class Patron {
 	 * @param printOption: String representing which type of print option the user wants; "window" or "console" are the two options.
 	 */
 	public static void bookSearch(Connection connection, String keyword, String criterion, String printOption) { //added printOption
+		
+		if (connection == null) {		// necessary for after button click in search box
+			connection = DatabaseConnection.openDatabase();
+		}
 		
 		String[] returnColumns = {"Book ID", "Title", "Author", "Available"};
 		
@@ -536,9 +540,8 @@ public class Patron {
 				
 				// actions based on selection
 				switch (selectedOption) {				
-					case "Search for Book":		// TODO
-					    
-						//WINDOW, drop-down list (keyword = type of search), 1 entry field, search button -> call the printFromDatabase/printResultSetinWindow methods /  see all books button -> getAllBooks
+					case "Search for Book":
+						BookSearch.main(null);
 					    break;
 					case "My Books on Hold":
 						globalPatron.getPatronBooks(globalConnection, "holdsview", "window");
@@ -702,7 +705,9 @@ public class Patron {
 		patronWindow.setTitle("Patrons - Main Page");
 		patronWindow.setVisible(true);
 		
-	}	
+	}
+	
+	
 	
 	// GETTER METHODS
 	/**
