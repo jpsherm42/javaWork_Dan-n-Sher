@@ -389,7 +389,7 @@ public class DatabaseQueries {
 			PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
 			
 			int rowsAffected = writeToDatabase(preparedStatement);
-			JOptionPane.showMessageDialog(null, rowsAffected + " entry added to " + table, "Insert Results", JOptionPane.INFORMATION_MESSAGE);
+			//JOptionPane.showMessageDialog(null, rowsAffected + " entry added to " + table, "Insert Results", JOptionPane.INFORMATION_MESSAGE);
 			
 		} catch (SQLException SQLe){
 			SQLe.printStackTrace();
@@ -413,7 +413,7 @@ public class DatabaseQueries {
 			PreparedStatement preparedStatement = connection.prepareStatement(removeQuery);
 			int rowsAffected = writeToDatabase(preparedStatement);
 			
-			JOptionPane.showMessageDialog(null, rowsAffected + " entry(ies) removed from " + table, "Removal Results", JOptionPane.INFORMATION_MESSAGE);
+			//JOptionPane.showMessageDialog(null, rowsAffected + " entry(ies) removed from " + table, "Removal Results", JOptionPane.INFORMATION_MESSAGE);
 		} catch (SQLException SQLe) {
 			SQLe.printStackTrace();
 		}		
@@ -436,7 +436,7 @@ public class DatabaseQueries {
 		try {
 			PreparedStatement preparedStatement = connection.prepareStatement(changeValQuery);
 			int rowsAffected = writeToDatabase(preparedStatement);	// will return 0 if no change made; no harm, no foul
-			JOptionPane.showMessageDialog(null, rowsAffected + " entry updated in " + table, "Update Results", JOptionPane.INFORMATION_MESSAGE);
+			//JOptionPane.showMessageDialog(null, rowsAffected + " entry updated in " + table, "Update Results", JOptionPane.INFORMATION_MESSAGE);
 		} catch (SQLException SQLe) {
 			SQLe.printStackTrace();
 		}
