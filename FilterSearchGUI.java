@@ -123,6 +123,9 @@ public abstract class FilterSearchGUI implements ActionListener {
 		filterWindow.setVisible(true);
 	}
 	
+	/**
+	 * Overriding the abstract actionPerformed method. Currently abstract, to be filled by subclasses   
+	 */
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		
