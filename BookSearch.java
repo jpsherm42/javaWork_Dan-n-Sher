@@ -15,6 +15,9 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
+/**
+ * Creates GUI (window) for searching for books by criterion. Designs window elements and actions.
+ */
 public class BookSearch extends JFrame {
 
 	//***Data fields***
@@ -23,6 +26,9 @@ public class BookSearch extends JFrame {
 	private String keywordOption = "Title"; // default
 	JTextField criterionEntry = new JTextField();
 	
+	/**
+	 * Creates GUI (window) for searching for books by criterion. Designs window elements and actions.
+	 */
 	public BookSearch(){
 		
 		JPanel display = new JPanel();
@@ -86,6 +92,10 @@ public class BookSearch extends JFrame {
 		seeAll.addActionListener(e -> this.dispose());
 	}
 	
+	/**
+	 * Main method for BookSearch class; used to finalize display of BookSearch window/GUI
+	 * @param args: String array; default is null
+	 */
 	public static void main(String[] args){
 		BookSearch frame = new BookSearch();
 		frame.setDefaultCloseOperation(HIDE_ON_CLOSE);
@@ -96,6 +106,9 @@ public class BookSearch extends JFrame {
 	}
 	
 	//***Inner Class***
+	/**
+	 * Implements ActionListener for buttons in BookSearch window/GUI.
+	 */
 	class UpdateListener implements ActionListener{
 
 		@Override
