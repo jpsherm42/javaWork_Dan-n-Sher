@@ -52,6 +52,7 @@ public class DatabaseQueries {
 	/**
 	 * Creates a 2D array of Strings of the column headers and information returned by query.
 	 * Passes array to displayInWindow for JFrame construction and visualization.
+	 * Returns the JFrame item to control visibility (and theoretically other features) from another class. If no results, returns null.
 	 * @param resultSet: ResultSet (Object) to display
 	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
 	 */
@@ -126,17 +127,6 @@ public class DatabaseQueries {
 							
 		        // show in window using method
 		        displayInWindow(results);    
-		        
-		        
-		        // console print version
-		        /*
-		        for (int r = 0; r < results.length; r++) {
-					for (int c = 0; c < results[r].length; c++) {
-						System.out.print(results[r][c] + "__");
-					}
-					System.out.print("\n");
-				}
-		        */
 				
 			} else {		// not results returned
 				JOptionPane.showMessageDialog(null, "There are no entries to display for the given search criteria.", "Query Results", JOptionPane.INFORMATION_MESSAGE);
@@ -150,6 +140,7 @@ public class DatabaseQueries {
 	
 	/**
 	 * Displays results of a SELECT query in tabular/grid format along with column headers in JFrame window.
+	 * Returns the JFrame item to control visibility (and theoretically other features) from another class.
 	 * @param results: 2D array of Strings to be displayed in window.
 	 */
 	public static void displayInWindow(String[][] results) {
@@ -157,7 +148,7 @@ public class DatabaseQueries {
 		
 		//panel for results
 		JPanel output = new JPanel();		// create content
-		output.setBackground(Color.WHITE);
+		//output.setBackground(Color.WHITE);
 		GridLayout layout = new GridLayout(results.length,results[0].length,5,0);
 		output.setLayout(layout);
 	
@@ -196,6 +187,143 @@ public class DatabaseQueries {
 		frame.setLocationRelativeTo(null);
 		frame.setTitle("Search Results");
 		frame.setVisible(true);
+	}
+		
+	/**
+	 * Perform SELECT query with connection to database. Calls getResultSetArray, which constructs that actual 2D array that is returned.
+	 * Very similar to printFromDatabase in form/function.
+	 * @param connection: Connection (Object) to use for database
+	 * @param selectQuery: String of SELECT query language
+	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
+	 * @return: 2D array of Strings containing the results from a Select query; if no results returned, returns *null*! If error in SQL query, returns null.
+	 */
+	public static String[][] readFromDatabase(Connection connection, String selectQuery, String[] columns) {
+		
+		try {
+
+	        //Run query
+			PreparedStatement preparedStatement = connection.prepareStatement(selectQuery, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			// allows pointer to move forward and backward in the query; does not allow for updates
+			// https://docs.oracle.com/javase/6/docs/api/java/sql/ResultSet.html
+			
+			//execute query and get result set
+			ResultSet resultSet = preparedStatement.executeQuery();
+			
+			String[][] results = getResultSetArray(resultSet, columns);
+			
+			resultSet.close();
+			preparedStatement.close();
+			return results;
+			
+		} catch (SQLException SQLe) {
+			SQLe.printStackTrace();
+			return null;
+		}
+	}
+	
+	/**
+	 * Converts given ResultSet to String[][] array based on passed column names.
+	 * @param resultSet: ResultSet (Object) to print
+	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
+	 * @return results: 2D array of Strings containing the results from a Select query; if no results returned, returns *null*!
+	 */
+	private static String[][] getResultSetArray(ResultSet resultSet, String[] columns) {
+				
+		try {
+			//point at last entry/row
+			resultSet.last();
+			// row number (if there are none, this will be 0)
+			int numRows = resultSet.getRow();
+			
+			// when there are results returned
+			if(numRows != 0) {
+				
+				//point at last entry/rows
+				resultSet.last();
+				// get row value
+				numRows = resultSet.getRow();
+				// point back to before the first entry/row
+			    resultSet.beforeFirst();
+				
+		        // Create the appropriately sized array for your results
+			    // 1 extra row for column (field) headers
+		    	String[][] results = new String[numRows+1][columns.length];
+		    	
+		    	// add column headers to 0th row of results array
+		    	
+		    	for (int cl = 0; cl < columns.length; cl++) {
+		    		results[0][cl] = columns[cl];
+		    	}
+		    	
+		    	
+				//Put results in array
+		        for(int row = 1; row <= numRows; row++){
+		        	
+		        	int col = 0;
+		        	
+		        	if(resultSet.next()){	// if there are results to read/point at
+		        		// Get the column values via column headers (String value)
+			        	// only use the specified column headers
+		        		for(String column: columns){
+		        			
+		        			// AVAILABLE COLUMN
+		        			if (column.equals("Available")) {
+		        				// availability is opposite of checkedOut
+		        				Boolean available = resultSet.getBoolean(column);
+		        				if (available) {
+		        					results[row][col] = "Available";
+		        				} else {
+		        					results[row][col] = "Not Available";
+		        				}
+		        			// FINE COLUMN: format to display $ and 2 decimal places
+		        			} else if (column.equals("Fine")){
+		        				double fineAmount = resultSet.getDouble(column);
+		        				results[row][col] = "$" + String.format("%2.2f",fineAmount);		// ASSUMPTION: hopefully no one owes more than $ 99.75 in fines!
+		        			
+		        			// DUE (date) COLUMN:  format to display day of week and month (MMM) and day (DD)
+		        			} else if (column.equals("Due")){
+		        				Date dueDate = resultSet.getDate(column);
+		        				SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, MMM dd");
+		        				results[row][col] = dateFormat.format(dueDate);
+		        			
+		        			} else {
+		        			
+		        				results[row][col] = resultSet.getString(column);
+		        			}
+		        			
+			       			col++;
+			       		}
+		        	}
+		        }
+							
+		        return results;
+		        
+				
+			} else {		// not results returned
+				return null;
+			}
+			
+		} catch (SQLException SQLe) {
+				SQLe.printStackTrace();
+				return null;
+		}
+		
+	}
+	
+	/**
+	 * prints CSV version of results to the console.
+	 * @param results: 2D String array containing results of SELECT query
+	 */
+	public static void consoleDisplay(String[][] results) {
+		
+		for (int r = 0; r < results.length; r++) {
+			// print first column [0] entry
+			System.out.print(results[r][0]);
+			for (int c = 1; c < results[r].length; c++) {
+				System.out.print(", " + results[r][c]);
+			}
+			System.out.print("\n");
+		}
 	}
 	
 	/**
@@ -332,128 +460,7 @@ public class DatabaseQueries {
 		
 		return rowsAffected;
 	}
-	
-	/**
-	 * Perform SELECT query with connection to database. Calls getResultSetArray, which constructs that actual 2D array that is returned.
-	 * Very similar to printFromDatabase in form/function.
-	 * @param connection: Connection (Object) to use for database
-	 * @param selectQuery: String of SELECT query language
-	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
-	 * @return: 2D array of Strings containing the results from a Select query; if no results returned, returns *null*! If error in SQL query, returns null.
-	 */
-	public static String[][] readFromDatabase(Connection connection, String selectQuery, String[] columns) {
-		
-		try {
 
-	        //Run query
-			PreparedStatement preparedStatement = connection.prepareStatement(selectQuery, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-			// allows pointer to move forward and backward in the query; does not allow for updates
-			// https://docs.oracle.com/javase/6/docs/api/java/sql/ResultSet.html
-			
-			//execute query and get result set
-			ResultSet resultSet = preparedStatement.executeQuery();
-			
-			String[][] results = getResultSetArray(resultSet, columns);
-			
-			resultSet.close();
-			preparedStatement.close();
-			return results;
-			
-		} catch (SQLException SQLe) {
-			SQLe.printStackTrace();
-			return null;
-		}
-	}
-	
-	/**
-	 * Converts given ResultSet to String[][] array based on passed column names.
-	 * @param resultSet: ResultSet (Object) to print
-	 * @param columns: Array of Strings (column headers) corresponding to the columns that will be printed
-	 * @return results: 2D array of Strings containing the results from a Select query; if no results returned, returns *null*!
-	 */
-	private static String[][] getResultSetArray(ResultSet resultSet, String[] columns) {
-				
-		try {
-			//point at last entry/row
-			resultSet.last();
-			// row number (if there are none, this will be 0)
-			int numRows = resultSet.getRow();
-			
-			// when there are results returned
-			if(numRows != 0) {
-				
-				//point at last entry/rows
-				resultSet.last();
-				// get row value
-				numRows = resultSet.getRow();
-				// point back to before the first entry/row
-			    resultSet.beforeFirst();
-				
-		        // Create the appropriately sized array for your results
-			    // 1 extra row for column (field) headers
-		    	String[][] results = new String[numRows+1][columns.length];
-		    	
-		    	// add column headers to 0th row of results array
-		    	
-		    	for (int cl = 0; cl < columns.length; cl++) {
-		    		results[0][cl] = columns[cl];
-		    	}
-		    	
-		    	
-				//Put results in array
-		        for(int row = 1; row <= numRows; row++){
-		        	
-		        	int col = 0;
-		        	
-		        	if(resultSet.next()){	// if there are results to read/point at
-		        		// Get the column values via column headers (String value)
-			        	// only use the specified column headers
-		        		for(String column: columns){
-		        			
-		        			// AVAILABLE COLUMN
-		        			if (column.equals("Available")) {
-		        				// availability is opposite of checkedOut
-		        				Boolean available = resultSet.getBoolean(column);
-		        				if (available) {
-		        					results[row][col] = "Available";
-		        				} else {
-		        					results[row][col] = "Not Available";
-		        				}
-		        			// FINE COLUMN: format to display $ and 2 decimal places
-		        			} else if (column.equals("Fine")){
-		        				double fineAmount = resultSet.getDouble(column);
-		        				results[row][col] = "$" + String.format("%2.2f",fineAmount);		// ASSUMPTION: hopefully no one owes more than $ 99.75 in fines!
-		        			
-		        			// DUE (date) COLUMN:  format to display day of week and month (MMM) and day (DD)
-		        			} else if (column.equals("Due")){
-		        				Date dueDate = resultSet.getDate(column);
-		        				SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, MMM dd");
-		        				results[row][col] = dateFormat.format(dueDate);
-		        			
-		        			} else {
-		        			
-		        				results[row][col] = resultSet.getString(column);
-		        			}
-		        			
-			       			col++;
-			       		}
-		        	}
-		        }
-							
-		        return results;
-		        
-				
-			} else {		// not results returned
-				return null;
-			}
-			
-		} catch (SQLException SQLe) {
-				SQLe.printStackTrace();
-				return null;
-		}
-		
-	}
-	
 	/**
 	 * Converts current (today's) date to String with specified format.
 	 * @return strDate: today's date in the form "YYYY-MM-dd" (e.g. 2020-12-15 for Dec. 15th, 2020)
@@ -469,6 +476,7 @@ public class DatabaseQueries {
 	
 	/**
 	 * Determines if a book-patron pair already exists in the holds or checkouts table.
+	 * Similar to namePairExists but with different search parameters (book_ID and patron_ID).
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: String name of table to be checked; `holds` or `checkouts` only
 	 * @param book_ID: String representation of book_ID in question
@@ -487,6 +495,7 @@ public class DatabaseQueries {
 	
 	/**
 	 * Determines if a book-patron pair already exists in the holds or checkouts table.
+	 * Similar to bookPatronPair but with different search parameters (firstName, lastName)
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: String name of table to be checked; `patrons` only
 	 * @param firstName: first name in question
@@ -495,7 +504,7 @@ public class DatabaseQueries {
 	 */
 	public static boolean namePairExists(Connection connection, String table, String firstName, String lastName) {
 		String selectQuery = "SELECT COUNT(*) AS COUNT FROM " + table + " WHERE firstName = '" + firstName + "' AND lastName = '" + lastName + "';";
-		
+
 		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"COUNT"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
 		System.out.println(results[1][0]);
 		if (Integer.parseInt(results[1][0]) > 0) {
@@ -503,7 +512,23 @@ public class DatabaseQueries {
 		} else { 
 			return false; 
 		}
-		
+
+	}
+	
+	/**
+	 * Gets the most recent (highest) id available from a given table (representing the id of the last item added)
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: String name of table to query; either `holds` or `checkouts`
+	 * @param idName: name of ID column in table
+	 * @return ID value as String
+	 */
+	public static String getLastID(Connection connection, String table, String idName) {
+		String selectQuery = "SELECT MAX(" + idName + ") AS id FROM " + table;
+
+		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"id"});		
+		// column "id" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+
+		return results[1][0]; 	// value (as String) of last ID
 	}
 	
 	/**
@@ -557,22 +582,11 @@ public class DatabaseQueries {
 		return results[1][0]; 	// value (as String) of hold_ID or check-out ID (chkO_ID)
 	}
 	
-	/**
-	 * Gets the most recent (highest) id available from a given table (representing the id of the last item added)
+	/** Determines status of book's availability and returns corresponding boolean value. 
 	 * @param connection: Connection (Object) to use for database
-	 * @param table: String name of table to query; either `holds` or `checkouts`
-	 * @param idName: name of ID column in table
-	 * @return ID value as String
+	 * @param book_ID: String of book ID for book in question
+	 * @return boolean: true if not checked out = Available; false otherwise.
 	 */
-	public static String getLastID(Connection connection, String table, String idName) {
-		String selectQuery = "SELECT MAX(" + idName + ") AS id FROM " + table;
-		
-		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"id"});		
-		// column "id" is just a placeholder; returns a 2x1 array with desired value in row index [1]
-		
-		return results[1][0]; 	// value (as String) of last ID
-	}
-	
 	public static boolean bookAvailable(Connection connection, String book_ID) {
 		String selectQuery = "SELECT NOT checkedOut AS Available FROM books WHERE book_ID = " + book_ID + ";";
 		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"Available"});	// column header is placehold; returns 2x1 array with desired result in row index [1]
