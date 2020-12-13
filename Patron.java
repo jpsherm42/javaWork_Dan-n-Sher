@@ -85,10 +85,6 @@ public class Patron {
 	 */
 	private static String selectedOption = "Search for Book"; // default value
 	
-	/**
-	 * Connection (Object) to use throughout class that can be accessed by anonymous classes (ActionListeners)
-	 */
-	private static Connection globalConnection;
 	
 	// CONSTRUCTOR
 	/**
@@ -99,14 +95,13 @@ public class Patron {
 	 * @param id: integer value as a String corresponding to the unique identifier for a patron.
 	 */
 	public Patron(Connection connection, String id){
-		globalConnection = connection;
 		
 		// construct SELECT query
 		String getPatronInfoQuery = "SELECT firstName, lastName, numBooksOut, numHolds, totalFineAmount FROM patrons WHERE patron_ID = " + id + ";";
 		
 		String[] columns = {"firstName", "lastName", "numBooksOut", "numHolds", "totalFineAmount"};
 		// pass to db and get results back
-		String[][] patronInfo = DatabaseQueries.readFromDatabase(globalConnection, getPatronInfoQuery, columns);		// returns 2 x 5 array; results are in row index 1
+		String[][] patronInfo = DatabaseQueries.readFromDatabase(connection, getPatronInfoQuery, columns);		// returns 2 x 5 array; results are in row index 1
 		
 		if (patronInfo == null || patronInfo.length == 1) {	// id passed does not exist in the db (length = 1) or some other error occurred
 			JOptionPane.showMessageDialog(null,"Invalid entry! Patron ID " + id + " does not exist.\nPlease try again or for a new user, create a new profile.", "Error!", JOptionPane.INFORMATION_MESSAGE);
@@ -536,7 +531,7 @@ public class Patron {
 		goButton.addActionListener(new ActionListener(){  
 			public void actionPerformed(ActionEvent e){  
 				//System.out.println(selectedOption); //prints option selected
-
+				Connection connection = DatabaseConnection.openDatabase();
 				
 				// actions based on selection
 				switch (selectedOption) {				
@@ -544,10 +539,10 @@ public class Patron {
 						BookSearch.main(null);
 					    break;
 					case "My Books on Hold":
-						globalPatron.getPatronBooks(globalConnection, "holdsview", "window");
+						globalPatron.getPatronBooks(connection, "holdsview", "window");
 						break;
 					case "My Books Checked Out":
-						globalPatron.getPatronBooks(globalConnection, "checkoutsview", "window");
+						globalPatron.getPatronBooks(connection, "checkoutsview", "window");
 						break;
 					case "Get Book Recommendation":
 						JOptionPane.showMessageDialog(null, "In the console below enter a desired genre, then a random book of that genre will be displayed.", "BOOK RECOMMENDATION", JOptionPane.INFORMATION_MESSAGE);
@@ -559,7 +554,7 @@ public class Patron {
 						try {
 							userGenreChoice = reader1.readLine();
 							// print results to console via method
-							getRandomBook(globalConnection, userGenreChoice);
+							getRandomBook(connection, userGenreChoice);
 							
 						} catch (IOException e1) { e1.printStackTrace(); }
 						
@@ -573,7 +568,7 @@ public class Patron {
 							JOptionPane.showMessageDialog(null, "You have already placed 25 books on hold.\nYou may not place any additional holds without removing one or more holds first.", "MAX HOLD REACHED", JOptionPane.INFORMATION_MESSAGE);
 						} else {
 							// display list of books NOT on hold
-							globalPatron.getUnheldBooks(globalConnection);
+							globalPatron.getUnheldBooks(connection);
 							
 							
 							System.out.print("Enter ID of book to hold: ");
@@ -585,8 +580,8 @@ public class Patron {
 								try {
 									Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
 									// if so...
-									if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
-										globalPatron.placeHold(globalConnection, enteredBookID);
+									if (DatabaseQueries.checkForBook(connection, "books", enteredBookID)) {	// verify that book id is in system
+										globalPatron.placeHold(connection, enteredBookID);
 									} else {		// ID does not exist in system warning message (to console)
 										System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
 									}
@@ -600,7 +595,7 @@ public class Patron {
 					    break;
 					case "Hold: Remove":
 						// display list of books on hold by patron
-						globalPatron.getPatronBooks(globalConnection, "holdsview", "console");
+						globalPatron.getPatronBooks(connection, "holdsview", "console");
 						BufferedReader reader3 = new BufferedReader(new InputStreamReader(System.in));
 						System.out.print("Enter ID of book to remove hold: ");
 
@@ -611,8 +606,8 @@ public class Patron {
 							try {
 								Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
 								// if so...
-								if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
-									globalPatron.removeHold(globalConnection, enteredBookID);
+								if (DatabaseQueries.checkForBook(connection, "books", enteredBookID)) {	// verify that book id is in system
+									globalPatron.removeHold(connection, enteredBookID);
 								} else {		// ID does not exist in system warning message (to console)
 									System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
 								}
@@ -632,7 +627,7 @@ public class Patron {
 						} else {
 							// display list of available books (not checked out)
 							System.out.println("Books available for checkout--");
-							bookSearch(globalConnection, "checkedOut", "0", "console");
+							bookSearch(connection, "checkedOut", "0", "console");
 							
 							BufferedReader reader4 = new BufferedReader(new InputStreamReader(System.in));
 							System.out.print("Enter ID of book to check out: ");
@@ -644,8 +639,8 @@ public class Patron {
 								try {
 									Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
 									// if so...
-									if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
-										globalPatron.checkOutBook(globalConnection, enteredBookID);
+									if (DatabaseQueries.checkForBook(connection, "books", enteredBookID)) {	// verify that book id is in system
+										globalPatron.checkOutBook(connection, enteredBookID);
 									} else {		// ID does not exist in system warning message (to console)
 										System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
 									}
@@ -659,7 +654,7 @@ public class Patron {
 					    break;
 					case "Check In (Return) Book":
 						// display list of books checked out to patron
-						globalPatron.getPatronBooks(globalConnection, "checkoutsview", "console");
+						globalPatron.getPatronBooks(connection, "checkoutsview", "console");
 						BufferedReader reader5 = new BufferedReader(new InputStreamReader(System.in));
 						System.out.print("Enter ID of book to check in (return): ");
 
@@ -670,8 +665,8 @@ public class Patron {
 							try {
 								Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
 								// if so...
-								if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
-									globalPatron.returnBook(globalConnection, enteredBookID);
+								if (DatabaseQueries.checkForBook(connection, "books", enteredBookID)) {	// verify that book id is in system
+									globalPatron.returnBook(connection, enteredBookID);
 								} else {		// ID does not exist in system warning message (to console)
 									System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
 								}
@@ -681,7 +676,7 @@ public class Patron {
 						} catch (IOException e5) { e5.printStackTrace(); }
 					    break;
 				}
-				
+				DatabaseConnection.closeDatabase(connection);
 			  }  
 			});
 		

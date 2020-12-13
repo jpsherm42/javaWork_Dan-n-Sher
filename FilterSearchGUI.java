@@ -65,7 +65,7 @@ public abstract class FilterSearchGUI implements ActionListener {
 		instructions.setHorizontalAlignment(SwingConstants.CENTER);
 		filterContents.add(instructions);
 
-		  //Create a box that holds a keyword drop down and a criterion text field
+		 //Create a box that holds a keyword drop down and a criterion text field
         JPanel box2 = new JPanel();
         box2.setLayout(new BoxLayout(box2, BoxLayout.LINE_AXIS));
         

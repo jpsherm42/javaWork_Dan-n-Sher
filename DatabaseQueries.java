@@ -516,6 +516,27 @@ public class DatabaseQueries {
 	}
 	
 	/**
+	 * Determines if a book-patron pair already exists in the holds or checkouts table.
+	 * Similar to bookPatronPair but with different search parameters (firstName, lastName)
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: String name of table to be checked; `patrons` only
+	 * @param id: patron id in question
+	 * @return boolean value: true if the pair exists; false otherwise
+	 */
+	public static boolean patronExists(Connection connection, String table, String id) {
+		String selectQuery = "SELECT COUNT(*) AS COUNT FROM " + table + " WHERE patron_ID = '" + id + "';";
+
+		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"COUNT"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+		System.out.println(results[1][0]);
+		if (Integer.parseInt(results[1][0]) > 0) {
+			return true;	
+		} else { 
+			return false; 
+		}
+
+	}
+	
+	/**
 	 * Gets the most recent (highest) id available from a given table (representing the id of the last item added)
 	 * @param connection: Connection (Object) to use for database
 	 * @param table: String name of table to query; either `holds` or `checkouts`

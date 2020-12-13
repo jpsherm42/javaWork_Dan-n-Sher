@@ -148,7 +148,7 @@ public class AddBookGUI implements ActionListener {
 				
 				//get the book id
 				String id = DatabaseQueries.getLastID(connection, "books", "book_ID");
-				
+			//Show a positive message if added, and an error message if not.	
 				JOptionPane.showMessageDialog(null, "Book successfully added! Its id is" + id, "Success!", JOptionPane.INFORMATION_MESSAGE);
 			}else {
 				JOptionPane.showMessageDialog(null, "No book was added because one or more fields were left blank.", "Field Blank", JOptionPane.WARNING_MESSAGE);
