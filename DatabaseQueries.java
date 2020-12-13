@@ -486,6 +486,27 @@ public class DatabaseQueries {
 	}
 	
 	/**
+	 * Determines if a book-patron pair already exists in the holds or checkouts table.
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: String name of table to be checked; `patrons` only
+	 * @param firstName: first name in question
+	 * @param lastName: last name in question
+	 * @return boolean value: true if the pair exists; false otherwise
+	 */
+	public static boolean namePairExists(Connection connection, String table, String firstName, String lastName) {
+		String selectQuery = "SELECT COUNT(*) AS COUNT FROM " + table + " WHERE firstName = '" + firstName + "' AND lastName = '" + lastName + "';";
+		
+		String[][]results = readFromDatabase(connection, selectQuery, new String[] {"COUNT"});		// column "count" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+		System.out.println(results[1][0]);
+		if (Integer.parseInt(results[1][0]) > 0) {
+			return true;	
+		} else { 
+			return false; 
+		}
+		
+	}
+	
+	/**
 	 * Gets a book's title (from the `books` table) based on the passed ID.
 	 * @param connection: Connection (Object) to use for database
 	 * @param book_ID: String representation of book_ID in question
@@ -534,6 +555,22 @@ public class DatabaseQueries {
 		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"id"});		// column "id" is just a placeholder; returns a 2x1 array with desired value in row index [1]
 		
 		return results[1][0]; 	// value (as String) of hold_ID or check-out ID (chkO_ID)
+	}
+	
+	/**
+	 * Gets the most recent (highest) id available from a given table (representing the id of the last item added)
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: String name of table to query; either `holds` or `checkouts`
+	 * @param idName: name of ID column in table
+	 * @return ID value as String
+	 */
+	public static String getLastID(Connection connection, String table, String idName) {
+		String selectQuery = "SELECT MAX(" + idName + ") AS id FROM " + table;
+		
+		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"id"});		
+		// column "id" is just a placeholder; returns a 2x1 array with desired value in row index [1]
+		
+		return results[1][0]; 	// value (as String) of last ID
 	}
 	
 	public static boolean bookAvailable(Connection connection, String book_ID) {
