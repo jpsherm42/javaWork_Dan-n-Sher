@@ -696,8 +696,8 @@ public class Patron {
 		
 		patronWindow.add(patronContents);
 		
-		// call method to display Welcome Window ****************************************************************************
-		patronWindow.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		
+		patronWindow.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		
 		//patronWindow.setPreferredSize(new Dimension(400, 300));
 		patronWindow.pack();		
