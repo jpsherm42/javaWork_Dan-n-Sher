@@ -8,7 +8,6 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -16,7 +15,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
-import javax.swing.border.LineBorder;
 
 /**
  * Manages database queries.
@@ -501,7 +499,7 @@ public class DatabaseQueries {
 	}
 	
 	/**
-	 * Check whether the passed book ID exists in the `books` table.
+	 * Check whether the passed book ID exists in a table.
 	 * @param connection: Connection (Object) to use for database
 	 * @param book_ID: String representation of book_ID in question
 	 * @return boolean value: true if the ID exists; false otherwise
@@ -536,6 +534,17 @@ public class DatabaseQueries {
 		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"id"});		// column "id" is just a placeholder; returns a 2x1 array with desired value in row index [1]
 		
 		return results[1][0]; 	// value (as String) of hold_ID or check-out ID (chkO_ID)
+	}
+	
+	public static boolean bookAvailable(Connection connection, String book_ID) {
+		String selectQuery = "SELECT NOT checkedOut AS Available FROM books WHERE book_ID = " + book_ID + ";";
+		String[][] results = readFromDatabase(connection, selectQuery, new String[] {"Available"});	// column header is placehold; returns 2x1 array with desired result in row index [1]
+		
+		if (results[1][0].equals("Available")) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 }

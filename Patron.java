@@ -1,7 +1,22 @@
 package lms;
 
+import java.awt.Button;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.Connection;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingConstants;
+import javax.swing.WindowConstants;
 
 /**
  * Class for Patron objects; primarily for accessing the database and using the program as a Patron.
@@ -45,7 +60,12 @@ public class Patron {
 	 */
 	private double fine;
 	
-	//static variables
+	/**
+	 * Patron (Object) representation of this instance of the class; for use throughout class that can be accessed by anonymous classes (ActionListeners)
+	 */
+	private Patron globalPatron;
+	
+	// STATIC VARIABLES
 	/**
 	 * The max number of books a patron can have checked out.
 	 * For the case of this project, all patrons are given the same max number.
@@ -58,6 +78,18 @@ public class Patron {
 	 */
 	private static int MAX_HOLDS = 25;
 	
+		// "global" variables available to entire class (including anonymous classes)
+	/**
+	 * Option selected from drop down menu of main patron page. Global class variable to allow for access by anonymous classes (ActionListeners)
+	 * Default value is "Search for Book".
+	 */
+	private static String selectedOption = "Search for Book"; // default value
+	
+	/**
+	 * Connection (Object) to use throughout class that can be accessed by anonymous classes (ActionListeners)
+	 */
+	private static Connection globalConnection;
+	
 	// CONSTRUCTOR
 	/**
 	 * Creates Patron (Java) Object that corresponds to a single row in the `patrons` table of the database.
@@ -67,13 +99,14 @@ public class Patron {
 	 * @param id: integer value as a String corresponding to the unique identifier for a patron.
 	 */
 	public Patron(Connection connection, String id){
+		globalConnection = connection;
 		
 		// construct SELECT query
 		String getPatronInfoQuery = "SELECT firstName, lastName, numBooksOut, numHolds, totalFineAmount FROM patrons WHERE patron_ID = " + id + ";";
 		
 		String[] columns = {"firstName", "lastName", "numBooksOut", "numHolds", "totalFineAmount"};
 		// pass to db and get results back
-		String[][] patronInfo = DatabaseQueries.readFromDatabase(connection, getPatronInfoQuery, columns);		// returns 2 x 5 array; results are in row index 1
+		String[][] patronInfo = DatabaseQueries.readFromDatabase(globalConnection, getPatronInfoQuery, columns);		// returns 2 x 5 array; results are in row index 1
 		
 		if (patronInfo == null || patronInfo.length == 1) {	// id passed does not exist in the db (length = 1) or some other error occurred
 			JOptionPane.showMessageDialog(null,"Invalid entry! Patron ID " + id + " does not exist.\nPlease try again or for a new user, create a new profile.", "Error!", JOptionPane.INFORMATION_MESSAGE);
@@ -87,6 +120,9 @@ public class Patron {
 		this.numBooksOut = Integer.parseInt(patronInfo[1][2]);	// convert to integer
 		this.numHolds = Integer.parseInt(patronInfo[1][3]);
 		this.fine = Double.parseDouble(patronInfo[1][4]);
+		
+		// make the globalPatron be THIS instance of the Patron Object
+		globalPatron = this;
 		
 	}
 	
@@ -151,6 +187,49 @@ public class Patron {
 		
 	}
 	
+	/**
+	 * Constructs SELECT query for `books` table to select books of a specific genre.
+	 * Calls functions to read from database based on query and * displays in console one (1) RANDOM result as a recommendation.
+	 * (Method does NOT consider availability or whether it's checked out or held by the user already.)
+	 * @param connection: Connection (Object) to use for database
+	 * @param table: Name of table to be queried (in this case it should always be `books`)
+	 * @param keyword: Name of column (`title`, `author`, or `genre`) (based on user input) to apply criterion to
+	 * @param criterion: Search input from user
+	 */
+	public static void getRandomBook(Connection connection, String genre) {
+		
+		String[] returnColumns = {"Book ID", "Title", "Author", "Available"};
+		
+		// construct query string
+		String searchQuery = "SELECT book_ID AS \"Book ID\", title, author, NOT checkedOut AS Available "
+				+ "FROM books "
+				+ "WHERE genre = \"" + genre + "\";";
+		//System.out.println(searchQuery);			// in case you want to print it to see it
+		
+		// read from db; get results array
+		String[][] results = DatabaseQueries.readFromDatabase(connection, searchQuery, returnColumns);
+		
+		if (results == null || results.length == 1) {	// no results returned (length 1 means just the headers returned
+			System.out.println("There are no books with that genre in the system. Sorry! Please return to the main patron page and try again.");
+		} else {
+			java.util.Random random = new java.util.Random();
+			/* Since the passed upper bound in NOT included,
+			 * the random num generator will return 0 to length-2.
+			 * We don't want row 0 of results as that's just the headers.
+			 * Adding 1 means that we can get row indices 1 to length-1.
+			 */
+			int randRow = random.nextInt(results.length-1) + 1;
+			
+			// print results to console
+			System.out.println("Book ID: " + results[randRow][0]);
+			System.out.println("Title: " + results[randRow][1]);
+			System.out.println("Author: " + results[randRow][2]);
+			System.out.println("Availability: " + results[randRow][3]);
+			System.out.println("\nTo get another recommendation, return to the main patron page and choose \"Get Book Recommendation\" again.");
+		}
+		
+	}
+	
 	// INSTANCE DATABASE METHODS
 	/**
 	 * Get a patron's holds or check-outs (determined by value of String `view`) by performing a SELECT query on the database (read, display results).
@@ -166,16 +245,16 @@ public class Patron {
 		
 		// conditions for which view table since we want to display different columns
 		if (view.equals("holdsview")) {
-			selectQuery = "SELECT book_ID AS \"Book ID\", title, author "
+			selectQuery = "SELECT book_ID AS \"Book ID\", title, author, NOT checkedOut AS Available "
 					+ "FROM " + view
 					+ " WHERE patron_ID = " + this.id 
 					+ " ORDER BY `title`;";
 			//System.out.println(selectQuery);			// in case you want to print it to see it
 			
 			// give value/meaning to array
-			returnColumns = new String[]{"Book ID", "Title", "Author"};
+			returnColumns = new String[]{"Book ID", "Title", "Author", "Available"};
 			
-		} else {		// checkoutsview
+		} else if (view.equals("checkoutsview"))  {
 			selectQuery = "SELECT book_ID AS \"Book ID\", title, author, dueDate AS `Due Date`, daysLate AS `Days Overdue`, fineAmount AS Fine "
 					+ "FROM " + view
 					+ " WHERE patron_ID = " + this.id 
@@ -186,8 +265,11 @@ public class Patron {
 			returnColumns = new String[]{"Book ID", "Title", "Author", "Due Date", "Days Overdue", "Fine"};
 		}
 		
-		// read from db; calls printResults method (results displayed in window)
-		DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+		if (!selectQuery.equals("") && returnColumns != null) {		// in case there are issues with the view string
+			// read from db; calls printResults method (results displayed in window)
+			DatabaseQueries.printFromDatabase(connection, selectQuery, returnColumns);
+		}
+
 		
 	}
 
@@ -219,9 +301,10 @@ public class Patron {
 	
 	/**
 	 * Places a book on hold for the specific patron (the user). First checks that the book is not already on hold by the patron requesting the hold.
-	 * If so, gives warning. Otherwise, updates the patron's number of books on hold in Java and the database;
+	 * If so, gives notice. Otherwise, updates the patron's number of books on hold in Java and the database;
 	 * adds a row to the `holds` table and updates the book's `onHold` column to reflect true (regardless of what the value was before the update);
 	 * shows user "success" message/window.
+	 * For this project/system, it does not matter whether book is checked out or not to place a hold, so this method does not check for that.
 	 * @param connection: Connection (Object) to use for database
 	 * @param book_ID: String representation of book_ID in question
 	 */
@@ -229,7 +312,7 @@ public class Patron {
 		// get book title
 		String title = DatabaseQueries.getBookTitle(connection, book_ID);
 		
-		// check if book_ID/patron_ID tuple already exists in database
+		// check if book_ID/patron_ID tuple already exists in table
 		if (DatabaseQueries.bookPatronPairExists(connection, "holds", book_ID, this.id)) {
 			// display error message/window
 			JOptionPane.showMessageDialog(null, "You have already placed " + title + " (ID: " + book_ID + ") on hold.\nIf you want to place a book on hold, select \"Hold: Place\" on main patron page and enter a different ID.", "BOOK ALREADY ON-HOLD", JOptionPane.INFORMATION_MESSAGE);
@@ -268,7 +351,7 @@ public class Patron {
 		// get book title
 		String title = DatabaseQueries.getBookTitle(connection, book_ID);
 		
-		// check if book_ID/patron_ID tuple already exists in database
+		// check if book_ID/patron_ID tuple already exists in table
 		if (DatabaseQueries.bookPatronPairExists(connection, "checkouts", book_ID, this.id)) {
 			// display error message/window
 			JOptionPane.showMessageDialog(null, "You've already checked out " + title + " (ID: " + book_ID + ").\nIf you want to check out a book, select \"Check Out Book\" on main patron page again and enter a different ID.", "BOOK ALREADY CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);
@@ -276,21 +359,33 @@ public class Patron {
 		}
 		
 		// else...
-		// update patron's info in Java and db
-		this.numBooksOut += 1;
-		DatabaseQueries.updateColumn(connection, "patrons", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
+		// check the book is available for check out
+		if (DatabaseQueries.bookAvailable(connection, book_ID)) {
+			// if book was on hold by patron (b-p pair in `holds` table), remove hold.
+			if (DatabaseQueries.bookPatronPairExists(connection, "holds", book_ID, this.id)) {
+				System.out.println("Removing " + title + " (ID: " + book_ID + ") from your holds list.");
+				this.removeHold(connection, book_ID);
+			}
+			
+			// update patron's info in Java and db
+			this.numBooksOut += 1;
+			DatabaseQueries.updateColumn(connection, "patrons", "numBooksOut", Integer.toString(this.numBooksOut), "patron_ID", this.id);
 
-		// make date string to pass
-		String dateAsString = DatabaseQueries.getTodaysDateAsString();
-		String[] values = {book_ID, this.id, dateAsString};
+			// make date string to pass
+			String dateAsString = DatabaseQueries.getTodaysDateAsString();
+			String[] values = {book_ID, this.id, dateAsString};
+			
+			// add row to holds table
+			DatabaseQueries.addToTable(connection, "checkouts", values);
+			// update book's row in books table
+			DatabaseQueries.updateColumn(connection, "books", "checkedOut", "true", "book_ID", book_ID);
+			
+			// display message
+			JOptionPane.showMessageDialog(null, title + " (ID: " + book_ID + ") checked out!\nIf this was a mistake, select \"Check In (Return) Book\" on main patron page and enter this book's ID again.\nIf you want to check out another book, select \"Check Out Book\" on main patron page again and enter another book ID.", "BOOK CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);
+		} else {	// book is already checked out (to a different user)
+			JOptionPane.showMessageDialog(null, "Unable to check out " + title + " (ID: " + book_ID + ") because it is checked out to another patron.\nIf you want to check out another book, select \"Check Out Book\" on main patron page again and enter another book ID.", "BOOK CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);
+		}
 		
-		// add row to holds table
-		DatabaseQueries.addToTable(connection, "checkouts", values);
-		// update book's row in books table
-		DatabaseQueries.updateColumn(connection, "books", "checkedOut", "true", "book_ID", book_ID);
-		
-		// display message
-		JOptionPane.showMessageDialog(null, title + " (ID: " + book_ID + ") checked out!\nIf this was a mistake, select \"Check In (Return) Book\" on main patron page and enter this book's ID again.\nIf you want to check out another book, select \"Check Out Book\" on main patron page again and enter another book ID.", "BOOK CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);
 	}
 		
 	/**
@@ -335,7 +430,7 @@ public class Patron {
 	}
 	
 	/**
-	 * Returns a book check out by a specific patron (the user). Verifies that the book-patron pair exists in the `checkouts` table.
+	 * Check-in a book for a specific patron (the user). Verifies that the book-patron pair exists in the `checkouts` table.
 	 * If so, decrease's patron's numBooksOut in Java and database; removes row from `checkouts` table.
 	 * Changes book's `checkedOut` column to false.
 	 * Gives message to user.
@@ -370,6 +465,227 @@ public class Patron {
 			JOptionPane.showMessageDialog(null, "You have not checked out " + title + " (ID: " + book_ID + ").\nIf you want check it out, select \"Check Out Book\" on the main patron page and enter this book's ID again.", "BOOK NOT CHECKED-OUT", JOptionPane.INFORMATION_MESSAGE);			
 		}
 	}
+	
+	/**
+	 * Method that creates, displays, and takes action on user choices at the Main Patron Page
+	 */
+	public void runPatron() {
+		JFrame patronWindow = new JFrame();
+		
+		JPanel patronContents = new JPanel();
+		//patronContents.setBackground(Color.WHITE);
+		GridLayout pageLayout = new GridLayout(4,1,10,0);
+		patronContents.setLayout(pageLayout);
+		
+		JLabel header = new JLabel("Patron Main Page");
+		header.setFont(new Font("Arial", Font.BOLD, 15));
+		header.setHorizontalAlignment(SwingConstants.CENTER);
+		header.setForeground(Color.black);
+		patronContents.add(header);
+		
+		JLabel instructions = new JLabel("Select an Action...");
+		instructions.setHorizontalAlignment(SwingConstants.CENTER);
+		patronContents.add(instructions);
+		
+		// create options
+		String[] options = {"Search for Book",
+				"My Books on Hold",
+				"My Books Checked Out",
+				"Get Book Recommendation",
+				"Show My Fine",
+				"Hold: Place",
+				"Hold: Remove",
+				"Check Out Book",
+				"Check In (Return) Book"};
+		
+		JComboBox<String> patronDropDown = new JComboBox<String>(options);
+		patronDropDown.setSelectedIndex(0);
+		
+		// from https://www.javatpoint.com/java-actionlistener -> anonymous class
+		patronDropDown.addActionListener(new ActionListener(){  
+			public void actionPerformed(ActionEvent e){  
+				// set value of selectedOption
+				// https://stackoverflow.com/questions/4962416/preferred-way-of-getting-the-selected-item-of-a-jcombobox
+				selectedOption = String.valueOf(patronDropDown.getSelectedItem());  
+		}  
+		});
+		patronContents.add(patronDropDown);
+		
+		Button goButton = new Button("GO!");
+		goButton.addActionListener(new ActionListener(){  
+			public void actionPerformed(ActionEvent e){  
+			    //prints option selected       
+				//System.out.println(selectedOption);
+
+				
+				// actions based on selection
+				switch (selectedOption) {				
+					case "Search for Book":		// TODO
+					    
+						//WINDOW, drop-down list (keyword = type of search), 1 entry field, search button -> call the printFromDatabase/printResultSetinWindow methods /  see all books button -> getAllBooks
+					    break;
+					case "My Books on Hold":
+						globalPatron.getPatronBooks(globalConnection, "holdsview");
+						break;
+					case "My Books Checked Out":
+						globalPatron.getPatronBooks(globalConnection, "checkoutsview");
+						break;
+					case "Get Book Recommendation":
+						JOptionPane.showMessageDialog(null, "In the console below enter a desired genre, then a random book of that genre will be displayed.", "BOOK RECOMMENDATION", JOptionPane.INFORMATION_MESSAGE);
+						
+						BufferedReader reader1 = new BufferedReader(new InputStreamReader(System.in));
+						System.out.println("Enter desired genre:");
+						// get input as String
+						String userGenreChoice;
+						try {
+							userGenreChoice = reader1.readLine();
+							// print results to console via method
+							getRandomBook(globalConnection, userGenreChoice);
+							
+						} catch (IOException e1) { e1.printStackTrace(); }
+						
+						break;
+					case "Show My Fine":
+						JOptionPane.showMessageDialog(null, "Current fine amount: $" + String.format("%2.2f", globalPatron.getFine()) + "\nThis value does not include the amount you may have to pay for current overdue (unreturned) books.", globalPatron.getFullName() + " Info", JOptionPane.INFORMATION_MESSAGE);
+					    break;
+					case "Hold: Place":
+						// if user's numHolds = 25, they can't place another hold: display warning message
+						if (globalPatron.getNumHolds() == globalPatron.getMaxHolds()) {
+							JOptionPane.showMessageDialog(null, "You have already placed 25 books on hold.\nYou may not place any additional holds without removing one or more holds first.", "MAX HOLD REACHED", JOptionPane.INFORMATION_MESSAGE);
+						} else {
+							// display list of books NOT on hold
+							globalPatron.getUnheldBooks(globalConnection);
+							
+							BufferedReader reader2 = new BufferedReader(new InputStreamReader(System.in));
+							System.out.print("Enter ID of book to hold: ");
+
+							try {
+								// get input as String
+								String enteredBookID = reader2.readLine();
+								
+								try {
+									Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
+									// if so...
+									if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
+										globalPatron.placeHold(globalConnection, enteredBookID);
+									} else {		// ID does not exist in system warning message (to console)
+										System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
+									}
+								} catch (NumberFormatException NFe) {
+									System.out.println("You did not enter a valid value. Return to main patron page to try again.");
+								}
+								
+								
+							} catch (IOException e2) { e2.printStackTrace(); }
+						}
+					    break;
+					case "Hold: Remove":
+						// display list of books on hold by patron
+						globalPatron.getPatronBooks(globalConnection, "holdsview");
+						BufferedReader reader3 = new BufferedReader(new InputStreamReader(System.in));
+						System.out.print("Enter ID of book to remove hold: ");
+
+						try {
+							// get input as String
+							String enteredBookID = reader3.readLine();
+							
+							try {
+								Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
+								// if so...
+								if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
+									globalPatron.removeHold(globalConnection, enteredBookID);
+								} else {		// ID does not exist in system warning message (to console)
+									System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
+								}
+							} catch (NumberFormatException NFe) {
+								System.out.println("You did not enter a valid value. Return to main patron page to try again.");
+							}
+							
+							
+						} catch (IOException e3) { e3.printStackTrace(); }
+						
+					    break;
+					case "Check Out Book":
+						// if user's numBooksOut = 10; they can't check out: display warning message
+						if (globalPatron.getNumBooksOut() == globalPatron.getMaxBooks()) {
+							JOptionPane.showMessageDialog(null, "You have already checked out 10 books.\nYou may not check out any more until you return at least 1 book. Happy reading!", "MAX CHECK-OUTS REACHED", JOptionPane.INFORMATION_MESSAGE);
+							return;
+						} else {
+							// display list of available books (not checked out)
+							bookSearch(globalConnection, "checkedOut", "0");
+							
+							BufferedReader reader4 = new BufferedReader(new InputStreamReader(System.in));
+							System.out.print("Enter ID of book to check out: ");
+
+							try {
+								// get input as String
+								String enteredBookID = reader4.readLine();
+								
+								try {
+									Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
+									// if so...
+									if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
+										globalPatron.checkOutBook(globalConnection, enteredBookID);
+									} else {		// ID does not exist in system warning message (to console)
+										System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
+									}
+								} catch (NumberFormatException NFe) {
+									System.out.println("You did not enter a valid value. Return to main patron page to try again.");
+								}
+								
+								
+							} catch (IOException e4) { e4.printStackTrace(); }
+						}
+					    break;
+					case "Check In (Return) Book":
+						// display list of books checked out to patron
+						globalPatron.getPatronBooks(globalConnection, "checkoutsview");
+						BufferedReader reader5 = new BufferedReader(new InputStreamReader(System.in));
+						System.out.print("Enter ID of book to check in (return): ");
+
+						try {
+							// get input as String
+							String enteredBookID = reader5.readLine();
+							
+							try {
+								Integer.parseInt(enteredBookID);	// see if the value can be made into an integer
+								// if so...
+								if (DatabaseQueries.checkForBook(globalConnection, "books", enteredBookID)) {	// verify that book id is in system
+									globalPatron.returnBook(globalConnection, enteredBookID);
+								} else {		// ID does not exist in system warning message (to console)
+									System.out.println("ID " + enteredBookID + " does not exist in the system. Return to main patron page to enter a different ID.");
+								}
+							} catch (NumberFormatException NFe) {
+								System.out.println("You did not enter a valid value. Return to main patron page to try again.");
+							}
+						} catch (IOException e5) { e5.printStackTrace(); }
+					    break;
+				}
+				
+			  }  
+			});
+		
+		JPanel bottomContents = new JPanel();
+		bottomContents.setLayout(new GridLayout(1,5));
+		bottomContents.add(new JLabel()); // place holder
+		bottomContents.add(new JLabel()); // place holder
+		bottomContents.add(goButton);
+		bottomContents.add(new JLabel()); // place holder
+		bottomContents.add(new JLabel()); // place holder
+		patronContents.add(bottomContents);
+		
+		patronWindow.add(patronContents);
+		
+		// call method to display Welcome Window ****************************************************************************
+		patronWindow.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		
+		//patronWindow.setPreferredSize(new Dimension(400, 300));
+		patronWindow.pack();		
+		patronWindow.setLocationRelativeTo(null);
+		patronWindow.setTitle("Patrons - Main Page");
+		patronWindow.setVisible(true);
+		
+	}	
 	
 	// GETTER METHODS
 	/**
